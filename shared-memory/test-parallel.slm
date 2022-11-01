@@ -4,18 +4,18 @@
 #SBATCH --account=cm30225
  
 # Set name of job
-#SBATCH --job-name=test-procedural
-#SBATCH --output=test-procedural.out
-#SBATCH --error=test-procedural.err
+#SBATCH --job-name=test-parallel
+#SBATCH --output=test-parallel.out
+#SBATCH --error=test-parallel.err
  
 # Set the number of nodes and partition
-#SBATCH --nodes=1
+#SBATCH --nodes=2
 #SBATCH --ntasks-per-node=44
 #SBATCH --partition=teaching
 
  
 # Set max wallclock time
-#SBATCH --time=00:02:00
+#SBATCH --time=00:20:00
  
 # Mail alert at start, end and abortion of execution
 #SBATCH --mail-type=END
@@ -24,4 +24,4 @@
 #SBATCH --mail-user=wlq20@bath.ac.uk
  
 # Run the application
-./procedural
+./parallel
