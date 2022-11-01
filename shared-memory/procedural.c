@@ -56,7 +56,7 @@ void relaxation(double array[SIZE][SIZE]) {
 }
 
 int main() {
-    double example[4][4] = {
+    double example[SIZE][SIZE] = {
         {1.0, 1.0, 1.0, 1.0}, 
         {1.0, 0.0, 0.0, 0.0},
         {1.0, 0.0, 0.0, 0.0},
