@@ -1,10 +1,28 @@
 #include <stdio.h>
 
 int main() {
-    int x = 8;
-    int y = x;
-    x = x + 1;
+    double temp[4][4] = {
+        {1.0, 1.0, 1.0, 1.0}, 
+        {1.0, 0.0, 0.0, 0.0},
+        {1.0, 0.0, 0.0, 0.0},
+        {1.0, 0.0, 0.0, 0.0},
+    };
 
-    printf("%p: %d\n%p: %d\n", &x, x, &y, y);
+    double* tempPtr;
+    tempPtr = &(temp[0][0]);
+
+    int SIZE = 4;
+    int i = 1;
+    int j = 1;
+    double meanValues[] = {
+        tempPtr[((i - 1) * SIZE) + j],
+        tempPtr[(i * SIZE) + j + 1],
+        tempPtr[((i + 1) * SIZE) + j],
+        tempPtr[(i * SIZE) + j - 1],
+    };
+
+    for (int k = 0; k < SIZE; k++) {
+        printf("%lf ", meanValues[k]);
+    }
     return 0;
 }
