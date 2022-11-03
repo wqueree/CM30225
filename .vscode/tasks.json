@@ -13,7 +13,7 @@
                 "-lpthread",
                 "-Wall",
                 "-Wextra",
-                "-Wconversion"
+                // "-Wconversion"
             ],
             "options": {
                 "cwd": "${fileDirname}"
