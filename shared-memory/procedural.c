@@ -5,7 +5,7 @@
 #include <string.h>
 
 #define SIZE 4
-#define PRECISION 0.001
+#define PRECISION 0.1
 #define THREADS 1
 
 void logSquareDoubleArray(double array[SIZE][SIZE]) {
