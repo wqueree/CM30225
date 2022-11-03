@@ -8,7 +8,7 @@
 #include <assert.h>
 
 #define SIZE 4
-#define PRECISION 0.001
+#define PRECISION 0.1
 #define THREADS 1
 
 typedef struct MatrixLocation {
@@ -20,7 +20,7 @@ typedef struct RelaxationBatch {
     long batchLength;
     double** start;
     double** batchStart;
-    double** array;
+    double** mat;
     double** temp;
     bool stop;
 } RelaxationBatch;
@@ -42,6 +42,10 @@ double** initDoubleMatrix() {
         mat[i] = (SIZE * i) + matBuf;
     }
     return mat;
+}
+
+void freeDoubleMatrix(double** mat) {
+    free(mat);
 }
 
 double doubleMean(double array[], int n) {
@@ -87,8 +91,8 @@ void* manageThread(void* voidBatch) {
     RelaxationBatch* batch = (RelaxationBatch*) voidBatch;
     double** current = batch->batchStart;
     for (size_t i = 0; i < batch->batchLength; i++) {
-        MatrixLocation* matrixLocation = calculateMatrixLocation(batch->start, current);
-        if (!updateIndex(matrixLocation->i, matrixLocation->j, batch->array, batch->temp)) {
+        MatrixLocation* matrixLocation = calculateMatrixLocation(batch->start, current++);
+        if (!updateIndex(matrixLocation->i, matrixLocation->j, batch->mat, batch->temp)) {
             batch->stop = false;
         }
         free(matrixLocation);
@@ -96,9 +100,18 @@ void* manageThread(void* voidBatch) {
     return NULL;
 }
 
-bool relaxationStep(double** array) {
-    double** temp = (double**) initDoubleMatrix();
-    memcpy(temp, array, sizeof(double*) * SIZE * SIZE); // TODO Copy mat values not pointers
+double** doubleMatDeepCopy(double** mat) {
+    double** copy = (double**) initDoubleMatrix();
+    for (size_t i = 0; i < SIZE; i++) {
+        for (size_t j = 0; j < SIZE; j++) {
+            copy[i][j] = mat[i][j];
+        }
+    }
+    return copy;
+} 
+
+bool relaxationStep(double** mat) {
+    double** temp = doubleMatDeepCopy(mat);
     double** start = temp;
     bool stopIteration = true;
     pthread_t threads[THREADS];
@@ -110,7 +123,7 @@ bool relaxationStep(double** array) {
         batches[i]->batchLength = batchLengths[i];
         batches[i]->start = start;
         batches[i]->batchStart = (double**) ((long) start + ((SIZE + 1 + processed) * sizeof(double*)));
-        batches[i]->array = array;
+        batches[i]->mat = mat;
         batches[i]->temp = temp;
         batches[i]->stop = true;
         assert(pthread_create(&threads[i], NULL, manageThread, (void*) batches[i]) == 0);
@@ -120,9 +133,10 @@ bool relaxationStep(double** array) {
         pthread_join(threads[i], NULL);
         if (!batches[i]->stop) {
             stopIteration = false;
-            free(&batches[i]);
         }
+        free(batches[i]);
     }
+    freeDoubleMatrix(temp);
     return stopIteration;
 }
 
@@ -136,21 +150,22 @@ void relaxation(double** mat) {
 }
 
 int main() {
-    double secondOrder[SIZE][SIZE] = {
+    double matArray[SIZE][SIZE] = {
         {1.0, 1.0, 1.0, 1.0}, 
         {1.0, 0.0, 0.0, 0.0},
         {1.0, 0.0, 0.0, 0.0},
         {1.0, 0.0, 0.0, 0.0},
     };
 
-    double** secondOrderPtr = (double**) initDoubleMatrix();
+    double** mat = (double**) initDoubleMatrix();
 
     for (size_t i = 0; i < SIZE; i++) {
         for (size_t j = 0; j < SIZE; j++) {
-            secondOrderPtr[i][j] = secondOrder[i][j];
+            mat[i][j] = matArray[i][j];
         }
     }
-
-    relaxation(secondOrderPtr);
+    relaxation(mat);
+    freeDoubleMatrix(mat);
     return 0;
 }
+
