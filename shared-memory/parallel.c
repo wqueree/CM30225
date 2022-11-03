@@ -5,38 +5,48 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <assert.h>
 
 #define SIZE 4
 #define PRECISION 0.001
-#define THREADS 2
+#define THREADS 1
 
-typedef struct ArrayLocation {
+typedef struct MatrixLocation {
     long i;
     long j;
-} ArrayLocation;
+} MatrixLocation;
 
 typedef struct RelaxationBatch {
     long batchLength;
-    double* start;
-    double* batchStart;
-    double* array;
-    double* temp;
+    double** start;
+    double** batchStart;
+    double** array;
+    double** temp;
     bool stop;
 } RelaxationBatch;
 
-void logSquareDoubleArray(double array[SIZE][SIZE]) {
-    for (int i = 0; i < SIZE; i++) {
-        for (int j = 0; j < SIZE; j++) {
-            printf("%lf ", array[i][j]);
+void logSquareDoubleArray(double** mat) {
+    for (size_t i = 0; i < SIZE; i++) {
+        for (size_t j = 0; j < SIZE; j++) {
+            printf("%lf ", mat[i][j]);
         }
         printf("\n");
     }
     printf("\n");
 }
 
+double** initDoubleMatrix() {
+    double** mat = (double**) malloc(SIZE * sizeof(double*));
+    double* matBuf = malloc(SIZE * SIZE * sizeof(double));
+    for (size_t i = 0; i < SIZE; i++) {
+        mat[i] = (SIZE * i) + matBuf;
+    }
+    return mat;
+}
+
 double doubleMean(double array[], int n) {
     double arraySum = 0.0;
-    for (int i = 0; i < n; i++) {
+    for (size_t i = 0; i < n; i++) {
         arraySum += array[i];
     }
     return arraySum / n;
@@ -44,98 +54,103 @@ double doubleMean(double array[], int n) {
 
 long* calculateThreadLengths() {
     long n = (SIZE - 2) * (SIZE - 2);
-    long* threadLengths = (long*) malloc(THREADS * sizeof(long));
-    memset(threadLengths, 0, THREADS * sizeof(*threadLengths));
+    long* threadLengths = (long*) calloc(THREADS, sizeof(long));
     long floor = n / THREADS;
-    for (long i = 0; i < THREADS; i++) {
+    for (size_t i = 0; i < THREADS; i++) {
         threadLengths[i] = floor;
     }
     threadLengths[0] += n % THREADS;
     return threadLengths;
 }
 
-bool updateIndex(long i, long j, double* array, double* temp) {
-    double meanValues[] = {
-        temp[((i - 1) * SIZE) + j],
-        temp[(i * SIZE) + j + 1],
-        temp[((i + 1) * SIZE) + j],
-        temp[(i * SIZE) + j - 1],
+bool updateIndex(long i, long j, double** mat, double** temp) {
+    double meanValues[SIZE] = {
+        temp[i - 1][j],
+        temp[i][j + 1],
+        temp[i + 1][j],
+        temp[i][j - 1],
     };
-    array[(i * SIZE) + j] = doubleMean(meanValues, 4);
-    bool stop = fabs(array[(i * SIZE) + j] - temp[(i * SIZE) + j]) < PRECISION;
+    mat[i][j] = doubleMean(meanValues, 4);
+    bool stop = fabs(mat[i][j] - temp[i][j]) < PRECISION;
     return stop;
 }
 
-ArrayLocation* calculateArrayLocation(double* start, double* current) {
-    long bytesFromStart = ((long) current - (long) start);
-    long longsFromStart = bytesFromStart / sizeof(long);
-    ArrayLocation* arrayLocation = (ArrayLocation*) malloc(sizeof(ArrayLocation));
-    arrayLocation->i = longsFromStart / SIZE;
-    arrayLocation->j = longsFromStart % SIZE;
-    return arrayLocation;
+MatrixLocation* calculateMatrixLocation(double** start, double** current) {
+    long indicesFromStart = current - start;
+    MatrixLocation* matrixLocation = (MatrixLocation*) malloc(sizeof(MatrixLocation));
+    matrixLocation->i = indicesFromStart / SIZE;
+    matrixLocation->j = indicesFromStart % SIZE;
+    return matrixLocation;
 }
 
 void* manageThread(void* voidBatch) {
     RelaxationBatch* batch = (RelaxationBatch*) voidBatch;
-    double* current = batch->batchStart;
-    for (long i = 0; i < batch->batchLength; i++) {
-        current += sizeof(long);
-        ArrayLocation* arrayLocation = calculateArrayLocation(batch->start, current);
-        if (!updateIndex(arrayLocation->i, arrayLocation->j, batch->array, batch->temp)) {
+    double** current = batch->batchStart;
+    for (size_t i = 0; i < batch->batchLength; i++) {
+        MatrixLocation* matrixLocation = calculateMatrixLocation(batch->start, current);
+        if (!updateIndex(matrixLocation->i, matrixLocation->j, batch->array, batch->temp)) {
             batch->stop = false;
         }
+        free(matrixLocation);
     }
     return NULL;
 }
 
-bool relaxationStep(double array[SIZE][SIZE]) {
-    double temp[SIZE][SIZE];
-    memcpy(temp, array, sizeof(double) * SIZE * SIZE);
-    double* start = &temp[0][0];
+bool relaxationStep(double** array) {
+    double** temp = (double**) initDoubleMatrix();
+    memcpy(temp, array, sizeof(double*) * SIZE * SIZE); // TODO Copy mat values not pointers
+    double** start = temp;
     bool stopIteration = true;
     pthread_t threads[THREADS];
-    long batchResults[THREADS];
     long* batchLengths = calculateThreadLengths();
     long processed = 0;
-    for (int i = 0; i < THREADS; i++) {
-        double* batchStart = (double*) ((long) start + ((SIZE + 1 + processed) * sizeof(long)));
-        RelaxationBatch* batch = (RelaxationBatch*) malloc(sizeof(RelaxationBatch));
-        batch->batchLength = batchLengths[i];
-        batch->start = start;
-        batch->batchStart = batchStart;
-        batch->array = &array[0][0];
-        batch->temp = &temp[0][0];
-        batch->stop = true;
-        batchResults[i] = pthread_create(&threads[i], NULL, manageThread, (void*) batch);
+    RelaxationBatch* batches[THREADS];
+    for (size_t i = 0; i < THREADS; i++) {
+        batches[i] = (RelaxationBatch*) malloc(sizeof(RelaxationBatch));
+        batches[i]->batchLength = batchLengths[i];
+        batches[i]->start = start;
+        batches[i]->batchStart = (double**) ((long) start + ((SIZE + 1 + processed) * sizeof(double*)));
+        batches[i]->array = array;
+        batches[i]->temp = temp;
+        batches[i]->stop = true;
+        assert(pthread_create(&threads[i], NULL, manageThread, (void*) batches[i]) == 0);
         processed += batchLengths[i];
     }
     for (int i = 0; i < THREADS; i++) {
-        if (!batchResults[i]) {
+        pthread_join(threads[i], NULL);
+        if (!batches[i]->stop) {
             stopIteration = false;
+            free(&batches[i]);
         }
-    }
-    for (int i = 0; i < THREADS; i++) {
-        free(&batchLengths[i]);
     }
     return stopIteration;
 }
 
-void relaxation(double array[SIZE][SIZE]) {
+void relaxation(double** mat) {
     bool stopIteration = false;
+    logSquareDoubleArray(mat);
     while (!stopIteration) {
-        logSquareDoubleArray(array);
-        stopIteration = relaxationStep(array);
+        stopIteration = relaxationStep(mat);
+        logSquareDoubleArray(mat);
     }
 }
 
 int main() {
-    double example[SIZE][SIZE] = {
+    double secondOrder[SIZE][SIZE] = {
         {1.0, 1.0, 1.0, 1.0}, 
         {1.0, 0.0, 0.0, 0.0},
         {1.0, 0.0, 0.0, 0.0},
         {1.0, 0.0, 0.0, 0.0},
     };
 
-    relaxation(example);
+    double** secondOrderPtr = (double**) initDoubleMatrix();
+
+    for (size_t i = 0; i < SIZE; i++) {
+        for (size_t j = 0; j < SIZE; j++) {
+            secondOrderPtr[i][j] = secondOrder[i][j];
+        }
+    }
+
+    relaxation(secondOrderPtr);
     return 0;
 }
