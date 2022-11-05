@@ -8,10 +8,10 @@
 #define PRECISION 0.1
 #define THREADS 1
 
-void logSquareDoubleArray(double array[SIZE][SIZE]) {
+void logSquareDoubleMatrix(double mat[SIZE][SIZE]) {
     for (int i = 0; i < SIZE; i++) {
         for (int j = 0; j < SIZE; j++) {
-            printf("%lf ", array[i][j]);
+            printf("%lf ", mat[i][j]);
         }
         printf("\n");
     }
@@ -49,9 +49,10 @@ bool relaxationStep(double array[SIZE][SIZE]) {
 
 void relaxation(double array[SIZE][SIZE]) {
     bool validDelta = false;
+    logSquareDoubleMatrix(array);
     while (!validDelta) {
-        logSquareDoubleArray(array);
         validDelta = relaxationStep(array);
+        logSquareDoubleMatrix(array);
     }
 }
 
