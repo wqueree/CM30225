@@ -9,7 +9,7 @@
 
 #define SIZE 4
 #define PRECISION 0.1
-#define THREADS 4
+#define THREADS 2
 
 typedef struct MatrixLocation {
     long i;
