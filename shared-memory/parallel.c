@@ -44,6 +44,7 @@ double** initDoubleMatrix() {
 }
 
 void freeDoubleMatrix(double** mat) {
+    free(mat[0]);
     free(mat);
 }
 
@@ -114,6 +115,13 @@ MatrixLocation** initBatchMatrixLocations(long* batchLengths) {
     return batchMatrixLocations;
 }
 
+void freeBatchMatrixLocations(MatrixLocation** batchMatrixLocations) {
+    for (size_t i = 0; i < THREADS; i++) {
+        free(batchMatrixLocations[i]);
+    }
+    free(batchMatrixLocations);
+}
+
 void calculateBatchMatrixLocations(MatrixLocation** batchMatrixLocations, long* batchLengths) {
     size_t batchNumber = 0;
     size_t batchProcessed = 0;
@@ -155,7 +163,8 @@ bool relaxationStep(double** mat) {
         free(batches[i]);
     }
     freeDoubleMatrix(temp);
-    free(batchMatrixLocations);
+    free(batchLengths);
+    freeBatchMatrixLocations(batchMatrixLocations);
     return stop;
 }
 
