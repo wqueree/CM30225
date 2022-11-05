@@ -8,7 +8,7 @@
 #include <assert.h>
 
 #define SIZE 4
-#define PRECISION 0.1
+#define PRECISION 0.001
 #define THREADS 2
 
 typedef struct MatrixLocation {

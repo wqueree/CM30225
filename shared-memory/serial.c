@@ -5,7 +5,7 @@
 #include <string.h>
 
 #define SIZE 4
-#define PRECISION 0.1
+#define PRECISION 0.001
 #define THREADS 1
 
 void logSquareDoubleMatrix(double mat[SIZE][SIZE]) {
