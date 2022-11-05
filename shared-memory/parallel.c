@@ -19,6 +19,7 @@ typedef struct MatrixLocation {
 typedef struct RelaxationBatch {
     size_t batchLength;
     MatrixLocation* matrixLocations;
+    pthread_mutex_t mat_mtx;
     double** mat;
     double** temp;
     bool stop;
@@ -67,14 +68,18 @@ long* calculateBatchLengths() {
     return batchLengths;
 }
 
-bool updateIndex(long i, long j, double** mat, double** temp) {
+bool updateIndex(long i, long j, double** mat, double** temp, pthread_mutex_t mat_mtx) {
     double meanValues[SIZE] = {
         temp[i - 1][j],
         temp[i][j + 1],
         temp[i + 1][j],
         temp[i][j - 1],
     };
+    
+    pthread_mutex_lock(&mat_mtx);
     mat[i][j] = doubleMean(meanValues, 4);
+    pthread_mutex_unlock(&mat_mtx);
+
     bool stop = fabs(mat[i][j] - temp[i][j]) < PRECISION;
     return stop;
 }
@@ -90,7 +95,7 @@ MatrixLocation* calculateMatrixLocation(double** start, double** current) {
 void* manageThread(void* voidBatch) {
     RelaxationBatch* batch = (RelaxationBatch*) voidBatch;
     for (size_t k = 0; k < batch->batchLength; k++) {
-        if (!updateIndex(batch->matrixLocations[k].i, batch->matrixLocations[k].j, batch->mat, batch->temp)) {
+        if (!updateIndex(batch->matrixLocations[k].i, batch->matrixLocations[k].j, batch->mat, batch->temp, batch->mat_mtx)) {
             batch->stop = false;
         }
     }
@@ -137,7 +142,7 @@ void calculateBatchMatrixLocations(MatrixLocation** batchMatrixLocations, long* 
     }
 }
 
-bool relaxationStep(double** mat) {
+bool relaxationStep(double** mat, pthread_mutex_t mat_mtx) {
     double** temp = doubleMatDeepCopy(mat);
     bool stop = true;
     pthread_t threads[THREADS];
@@ -151,6 +156,7 @@ bool relaxationStep(double** mat) {
         batches[i]->batchLength = (size_t) batchLengths[i];
         batches[i]->matrixLocations = batchMatrixLocations[i];
         batches[i]->mat = mat;
+        batches[i]->mat_mtx = mat_mtx;
         batches[i]->temp = temp;
         batches[i]->stop = true;
         assert(pthread_create(&threads[i], NULL, manageThread, (void*) batches[i]) == 0);
@@ -168,11 +174,11 @@ bool relaxationStep(double** mat) {
     return stop;
 }
 
-void relaxation(double** mat) {
-    bool stopIteration = false;
+void relaxation(double** mat, pthread_mutex_t mat_mtx) {
+    bool stop = false;
     logSquareDoubleMatrix(mat);
-    while (!stopIteration) {
-        stopIteration = relaxationStep(mat);
+    while (!stop) {
+        stop = relaxationStep(mat, mat_mtx);
         logSquareDoubleMatrix(mat);
     }
 }
@@ -192,8 +198,11 @@ int main() {
             mat[i][j] = matArray[i][j];
         }
     }
+
+    pthread_mutex_t mat_mtx;
+    pthread_mutex_init(&mat_mtx, NULL);
     
-    relaxation(mat);
+    relaxation(mat, mat_mtx);
     freeDoubleMatrix(mat);
     return 0;
 }
