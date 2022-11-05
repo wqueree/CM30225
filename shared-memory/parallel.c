@@ -17,7 +17,7 @@ typedef struct MatrixLocation {
 } MatrixLocation;
 
 typedef struct RelaxationBatch {
-    long batchLength;
+    size_t batchLength;
     MatrixLocation* matrixLocations;
     double** mat;
     double** temp;
@@ -48,12 +48,12 @@ void freeDoubleMatrix(double** mat) {
     free(mat);
 }
 
-double doubleMean(double mat[], int n) {
+double doubleMean(double mat[], size_t n) {
     double matSum = 0.0;
     for (size_t i = 0; i < n; i++) {
         matSum += mat[i];
     }
-    return matSum / n;
+    return matSum / (double) n;
 }
 
 long* calculateBatchLengths() {
@@ -110,7 +110,7 @@ double** doubleMatDeepCopy(double** mat) {
 MatrixLocation** initBatchMatrixLocations(long* batchLengths) {
     MatrixLocation** batchMatrixLocations = (MatrixLocation**) malloc(THREADS * sizeof(MatrixLocation*));
     for (size_t i = 0; i < THREADS; i++) {
-        batchMatrixLocations[i] = (MatrixLocation*) malloc(batchLengths[i] * sizeof(MatrixLocation));
+        batchMatrixLocations[i] = (MatrixLocation*) malloc((size_t) batchLengths[i] * sizeof(MatrixLocation));
     }
     return batchMatrixLocations;
 }
@@ -125,11 +125,11 @@ void freeBatchMatrixLocations(MatrixLocation** batchMatrixLocations) {
 void calculateBatchMatrixLocations(MatrixLocation** batchMatrixLocations, long* batchLengths) {
     size_t batchNumber = 0;
     size_t batchProcessed = 0;
-    for (size_t i = 1; i < SIZE - 1; i++) {
-        for (size_t j = 1; j < SIZE - 1; j++) {
+    for (long i = 1; i < SIZE - 1; i++) {
+        for (long j = 1; j < SIZE - 1; j++) {
             batchMatrixLocations[batchNumber][batchProcessed].i = i;
             batchMatrixLocations[batchNumber][batchProcessed].j = j;
-            if (++batchProcessed == batchLengths[batchNumber]) {
+            if (++batchProcessed == (size_t) batchLengths[batchNumber]) {
                 batchNumber++;
                 batchProcessed = 0;
             }
@@ -148,7 +148,7 @@ bool relaxationStep(double** mat) {
 
     for (size_t i = 0; i < THREADS; i++) {
         batches[i] = (RelaxationBatch*) malloc(sizeof(RelaxationBatch));
-        batches[i]->batchLength = batchLengths[i];
+        batches[i]->batchLength = (size_t) batchLengths[i];
         batches[i]->matrixLocations = batchMatrixLocations[i];
         batches[i]->mat = mat;
         batches[i]->temp = temp;
@@ -192,8 +192,8 @@ int main() {
             mat[i][j] = matArray[i][j];
         }
     }
+    
     relaxation(mat);
     freeDoubleMatrix(mat);
     return 0;
 }
-
