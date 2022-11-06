@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <assert.h>
 
-#define PRECISION 0.00001
+#define PRECISION 0.0001
 #define THREADS 2
 
 typedef struct MatrixLocation {

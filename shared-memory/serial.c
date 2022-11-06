@@ -4,7 +4,7 @@
 #include <math.h>
 #include <string.h>
 
-#define PRECISION 0.00001
+#define PRECISION 0.0001
 #define THREADS 1
 
 void logSquareDoubleMatrix(double** mat, size_t size) {
