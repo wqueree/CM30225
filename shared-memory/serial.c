@@ -4,7 +4,7 @@
 #include <math.h>
 #include <string.h>
 
-#define PRECISION 0.0001
+#define PRECISION 0.01
 #define THREADS 1
 
 void logSquareDoubleMatrix(double** mat, size_t size) {
@@ -79,23 +79,24 @@ void relaxation(double** mat, size_t size) {
     }
 }
 
-int main() {
-    size_t size = 4;
+int main(int argc, char** argv) {
 
-    double matArray[][4] = {
-        {1.0, 1.0, 1.0, 1.0}, 
-        {1.0, 0.0, 0.0, 0.0},
-        {1.0, 0.0, 0.0, 0.0},
-        {1.0, 0.0, 0.0, 0.0},
-    };
+    char* dataFilePath = argv[1];
+    FILE* dataFile = fopen(dataFilePath, "r");
+
+    size_t size = 0;
+
+    fscanf(dataFile, "%ld", &size);
 
     double** mat = initDoubleMatrix(size);
 
     for (size_t i = 0; i < size; i++) {
         for (size_t j = 0; j < size; j++) {
-            mat[i][j] = matArray[i][j];
+            fscanf(dataFile, "%lf", &mat[i][j]);
         }
     }
+
+    fclose(dataFile);
     
     relaxation(mat, size);
     freeDoubleMatrix(mat);
