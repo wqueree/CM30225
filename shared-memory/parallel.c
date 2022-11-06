@@ -7,7 +7,6 @@
 #include <unistd.h>
 #include <assert.h>
 
-#define SIZE 4
 #define PRECISION 0.00001
 #define THREADS 2
 
@@ -25,9 +24,9 @@ typedef struct RelaxationBatch {
     bool stop;
 } RelaxationBatch;
 
-void logSquareDoubleMatrix(double** mat) {
-    for (size_t i = 0; i < SIZE; i++) {
-        for (size_t j = 0; j < SIZE; j++) {
+void logSquareDoubleMatrix(double** mat, size_t size) {
+    for (size_t i = 0; i < size; i++) {
+        for (size_t j = 0; j < size; j++) {
             printf("%lf ", mat[i][j]);
         }
         printf("\n");
@@ -35,11 +34,11 @@ void logSquareDoubleMatrix(double** mat) {
     printf("\n");
 }
 
-double** initDoubleMatrix() {
-    double** mat = (double**) malloc(SIZE * sizeof(double*));
-    double* matBuf = malloc(SIZE * SIZE * sizeof(double));
-    for (size_t i = 0; i < SIZE; i++) {
-        mat[i] = (SIZE * i) + matBuf;
+double** initDoubleMatrix(size_t size) {
+    double** mat = (double**) malloc(size * sizeof(double*));
+    double* matBuf = malloc(size * size * sizeof(double));
+    for (size_t i = 0; i < size; i++) {
+        mat[i] = (size * i) + matBuf;
     }
     return mat;
 }
@@ -57,8 +56,8 @@ double doubleMean(double mat[], size_t n) {
     return matSum / (double) n;
 }
 
-long* calculateBatchLengths() {
-    long n = (SIZE - 2) * (SIZE - 2);
+long* calculateBatchLengths(size_t size) {
+    long n = (long) ((size - 2) * (size - 2));
     long* batchLengths = (long*) calloc(THREADS, sizeof(long));
     long floor = n / THREADS;
     for (size_t i = 0; i < THREADS; i++) {
@@ -69,7 +68,7 @@ long* calculateBatchLengths() {
 }
 
 bool updateIndex(long i, long j, double** mat, double** temp, pthread_mutex_t mat_mtx) {
-    double meanValues[SIZE] = {
+    double meanValues[] = {
         temp[i - 1][j],
         temp[i][j + 1],
         temp[i + 1][j],
@@ -84,14 +83,6 @@ bool updateIndex(long i, long j, double** mat, double** temp, pthread_mutex_t ma
     return stop;
 }
 
-MatrixLocation* calculateMatrixLocation(double** start, double** current) {
-    long indicesFromStart = current - start;
-    MatrixLocation* matrixLocation = (MatrixLocation*) malloc(sizeof(MatrixLocation));
-    matrixLocation->i = indicesFromStart / SIZE;
-    matrixLocation->j = indicesFromStart % SIZE;
-    return matrixLocation;
-}
-
 void* manageThread(void* voidBatch) {
     RelaxationBatch* batch = (RelaxationBatch*) voidBatch;
     for (size_t k = 0; k < batch->batchLength; k++) {
@@ -102,10 +93,10 @@ void* manageThread(void* voidBatch) {
     return NULL;
 }
 
-double** doubleMatDeepCopy(double** mat) {
-    double** copy = (double**) initDoubleMatrix();
-    for (size_t i = 0; i < SIZE; i++) {
-        for (size_t j = 0; j < SIZE; j++) {
+double** doubleMatrixDeepCopy(double** mat, size_t size) {
+    double** copy = (double**) initDoubleMatrix(size);
+    for (size_t i = 0; i < size; i++) {
+        for (size_t j = 0; j < size; j++) {
             copy[i][j] = mat[i][j];
         }
     }
@@ -127,11 +118,11 @@ void freeBatchMatrixLocations(MatrixLocation** batchMatrixLocations) {
     free(batchMatrixLocations);
 }
 
-void calculateBatchMatrixLocations(MatrixLocation** batchMatrixLocations, long* batchLengths) {
+void calculateBatchMatrixLocations(MatrixLocation** batchMatrixLocations, long* batchLengths, size_t size) {
     size_t batchNumber = 0;
     size_t batchProcessed = 0;
-    for (long i = 1; i < SIZE - 1; i++) {
-        for (long j = 1; j < SIZE - 1; j++) {
+    for (long i = 1; i < (long) size - 1; i++) {
+        for (long j = 1; j < (long) size - 1; j++) {
             batchMatrixLocations[batchNumber][batchProcessed].i = i;
             batchMatrixLocations[batchNumber][batchProcessed].j = j;
             if (++batchProcessed == (size_t) batchLengths[batchNumber]) {
@@ -142,13 +133,13 @@ void calculateBatchMatrixLocations(MatrixLocation** batchMatrixLocations, long* 
     }
 }
 
-bool relaxationStep(double** mat, pthread_mutex_t mat_mtx) {
-    double** temp = doubleMatDeepCopy(mat);
+bool relaxationStep(double** mat, size_t size, pthread_mutex_t mat_mtx) {
+    double** temp = doubleMatrixDeepCopy(mat, size);
     bool stop = true;
     pthread_t threads[THREADS];
-    long* batchLengths = calculateBatchLengths();
+    long* batchLengths = calculateBatchLengths(size);
     MatrixLocation** batchMatrixLocations = (MatrixLocation**) initBatchMatrixLocations(batchLengths);
-    calculateBatchMatrixLocations(batchMatrixLocations, batchLengths);
+    calculateBatchMatrixLocations(batchMatrixLocations, batchLengths, size);
     RelaxationBatch* batches[THREADS];
 
     for (size_t i = 0; i < THREADS; i++) {
@@ -174,27 +165,29 @@ bool relaxationStep(double** mat, pthread_mutex_t mat_mtx) {
     return stop;
 }
 
-void relaxation(double** mat, pthread_mutex_t mat_mtx) {
+void relaxation(double** mat, size_t size, pthread_mutex_t mat_mtx) {
     bool stop = false;
-    logSquareDoubleMatrix(mat);
+    logSquareDoubleMatrix(mat, size);
     while (!stop) {
-        stop = relaxationStep(mat, mat_mtx);
-        logSquareDoubleMatrix(mat);
+        stop = relaxationStep(mat, size, mat_mtx);
+        logSquareDoubleMatrix(mat, size);
     }
 }
 
 int main() {
-    double matArray[SIZE][SIZE] = {
+    size_t size = 4;
+
+    double matArray[][4] = {
         {1.0, 1.0, 1.0, 1.0}, 
         {1.0, 0.0, 0.0, 0.0},
         {1.0, 0.0, 0.0, 0.0},
         {1.0, 0.0, 0.0, 0.0},
     };
 
-    double** mat = initDoubleMatrix();
+    double** mat = initDoubleMatrix(size);
 
-    for (size_t i = 0; i < SIZE; i++) {
-        for (size_t j = 0; j < SIZE; j++) {
+    for (size_t i = 0; i < size; i++) {
+        for (size_t j = 0; j < size; j++) {
             mat[i][j] = matArray[i][j];
         }
     }
@@ -202,7 +195,7 @@ int main() {
     pthread_mutex_t mat_mtx;
     pthread_mutex_init(&mat_mtx, NULL);
     
-    relaxation(mat, mat_mtx);
+    relaxation(mat, size, mat_mtx);
     freeDoubleMatrix(mat);
     return 0;
 }

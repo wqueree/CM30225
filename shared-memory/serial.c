@@ -4,13 +4,12 @@
 #include <math.h>
 #include <string.h>
 
-#define SIZE 4
 #define PRECISION 0.00001
 #define THREADS 1
 
-void logSquareDoubleMatrix(double mat[SIZE][SIZE]) {
-    for (int i = 0; i < SIZE; i++) {
-        for (int j = 0; j < SIZE; j++) {
+void logSquareDoubleMatrix(double** mat, size_t size) {
+    for (size_t i = 0; i < size; i++) {
+        for (size_t j = 0; j < size; j++) {
             printf("%lf ", mat[i][j]);
         }
         printf("\n");
@@ -18,51 +17,87 @@ void logSquareDoubleMatrix(double mat[SIZE][SIZE]) {
     printf("\n");
 }
 
-double doubleMean(double array[], int n) {
-    double arraySum = 0.0;
-    for (int i = 0; i < n; i++) {
-        arraySum += array[i];
+double** initDoubleMatrix(size_t size) {
+    double** mat = (double**) malloc(size * sizeof(double*));
+    double* matBuf = malloc(size * size * sizeof(double));
+    for (size_t i = 0; i < size; i++) {
+        mat[i] = (size * i) + matBuf;
     }
-    return arraySum / n;
+    return mat;
 }
 
-bool relaxationStep(double array[SIZE][SIZE]) {
-    double temp[SIZE][SIZE];
-    bool validDelta = true;
-    memcpy(temp, array, sizeof(double) * SIZE * SIZE);
-    for (int i = 1; i < SIZE - 1; i++) {
-        for (int j = 1; j < SIZE - 1; j++) {
+void freeDoubleMatrix(double** mat) {
+    free(mat[0]);
+    free(mat);
+}
+
+double** doubleMatrixDeepCopy(double** mat, size_t size) {
+    double** copy = (double**) initDoubleMatrix(size);
+    for (size_t i = 0; i < size; i++) {
+        for (size_t j = 0; j < size; j++) {
+            copy[i][j] = mat[i][j];
+        }
+    }
+    return copy;
+}
+
+double doubleMean(double mat[], int n) {
+    double matSum = 0.0;
+    for (int i = 0; i < n; i++) {
+        matSum += mat[i];
+    }
+    return matSum / n;
+}
+
+bool relaxationStep(double** mat, size_t size) {
+    double** temp = doubleMatrixDeepCopy(mat, size);
+    bool stop = true;
+    for (size_t i = 1; i < size - 1; i++) {
+        for (size_t j = 1; j < size - 1; j++) {
             double meanValues[] = {
                 temp[i - 1][j],
                 temp[i][j + 1],
                 temp[i + 1][j],
                 temp[i][j - 1]
             };
-            array[i][j] = doubleMean(meanValues, 4);
-            if (fabs(array[i][j] - temp[i][j]) > PRECISION) {
-                validDelta = false;
+            mat[i][j] = doubleMean(meanValues, 4);
+            if (fabs(mat[i][j] - temp[i][j]) > PRECISION) {
+                stop = false;
             }
         }
     }
-    return validDelta;
+    freeDoubleMatrix(temp);
+    return stop;
 }
 
-void relaxation(double array[SIZE][SIZE]) {
-    bool validDelta = false;
-    logSquareDoubleMatrix(array);
-    while (!validDelta) {
-        validDelta = relaxationStep(array);
-        logSquareDoubleMatrix(array);
+void relaxation(double** mat, size_t size) {
+    bool stop = false;
+    logSquareDoubleMatrix(mat, size);
+    while (!stop) {
+        stop = relaxationStep(mat, size);
+        logSquareDoubleMatrix(mat, size);
     }
 }
 
 int main() {
-    double example[SIZE][SIZE] = {
+    size_t size = 4;
+
+    double matArray[][4] = {
         {1.0, 1.0, 1.0, 1.0}, 
         {1.0, 0.0, 0.0, 0.0},
         {1.0, 0.0, 0.0, 0.0},
         {1.0, 0.0, 0.0, 0.0},
     };
-    relaxation(example);
+
+    double** mat = initDoubleMatrix(size);
+
+    for (size_t i = 0; i < size; i++) {
+        for (size_t j = 0; j < size; j++) {
+            mat[i][j] = matArray[i][j];
+        }
+    }
+    
+    relaxation(mat, size);
+    freeDoubleMatrix(mat);
     return 0;
 }
