@@ -10,7 +10,7 @@
 void logSquareDoubleMatrix(double** mat, size_t size) {
     for (size_t i = 0; i < size; i++) {
         for (size_t j = 0; j < size; j++) {
-            printf("%lf ", mat[i][j]);
+            printf("%.2lf ", mat[i][j]);
         }
         printf("\n");
     }
