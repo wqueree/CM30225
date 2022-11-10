@@ -91,7 +91,7 @@ void timespecDifference(struct timespec start, struct timespec stop, struct time
 }
 
 void logDuration(size_t size, double duration) {
-    printf("%ldx%ld matrix converged in %lfs\n", size, size, duration);
+    printf("%ldx%ld matrix converged at precision %lf in %lfs\n", size, size, PRECISION, duration);
 }
 
 double doubleTime(struct timespec delta) {
