@@ -9,7 +9,7 @@
 #SBATCH --error=test-parallel.err
  
 # Set the number of nodes and partition
-#SBATCH --nodes=1
+#SBATCH --nodes=2
 #SBATCH --ntasks-per-node=44
 #SBATCH --partition=iteaching
 
