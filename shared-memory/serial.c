@@ -3,51 +3,8 @@
 #include <stdbool.h>
 #include <math.h>
 #include <string.h>
-
-#define PRECISION 0.01
-#define THREADS 1
-
-void logSquareDoubleMatrix(double** mat, size_t size) {
-    for (size_t i = 0; i < size; i++) {
-        for (size_t j = 0; j < size; j++) {
-            printf("%.2lf ", mat[i][j]);
-        }
-        printf("\n");
-    }
-    printf("\n");
-}
-
-double** initDoubleMatrix(size_t size) {
-    double** mat = (double**) malloc(size * sizeof(double*));
-    double* matBuf = malloc(size * size * sizeof(double));
-    for (size_t i = 0; i < size; i++) {
-        mat[i] = (size * i) + matBuf;
-    }
-    return mat;
-}
-
-void freeDoubleMatrix(double** mat) {
-    free(mat[0]);
-    free(mat);
-}
-
-double** doubleMatrixDeepCopy(double** mat, size_t size) {
-    double** copy = (double**) initDoubleMatrix(size);
-    for (size_t i = 0; i < size; i++) {
-        for (size_t j = 0; j < size; j++) {
-            copy[i][j] = mat[i][j];
-        }
-    }
-    return copy;
-}
-
-double doubleMean(double mat[], int n) {
-    double matSum = 0.0;
-    for (int i = 0; i < n; i++) {
-        matSum += mat[i];
-    }
-    return matSum / n;
-}
+#include <time.h>
+#include "utils.h"
 
 bool relaxationStep(double** mat, size_t size) {
     double** temp = doubleMatrixDeepCopy(mat, size);
@@ -70,12 +27,12 @@ bool relaxationStep(double** mat, size_t size) {
     return stop;
 }
 
-void relaxation(double** mat, size_t size) {
+void relaxation(double** mat, size_t size, bool logging) {
     bool stop = false;
-    logSquareDoubleMatrix(mat, size);
+    if (logging) logSquareDoubleMatrix(mat, size);
     while (!stop) {
         stop = relaxationStep(mat, size);
-        logSquareDoubleMatrix(mat, size);
+        if (logging) logSquareDoubleMatrix(mat, size);
     }
 }
 
@@ -97,8 +54,17 @@ int main(int argc, char** argv) {
     }
 
     fclose(dataFile);
-    
-    relaxation(mat, size);
+
+    struct timespec start, stop, delta;
+
+    clock_gettime(CLOCK_REALTIME, &start);
+    relaxation(mat, size, LOGGING);
+    clock_gettime(CLOCK_REALTIME, &stop);
+
+    timespecDifference(start, stop, &delta);
+    double duration = doubleTime(delta);
+
+    logDuration(size, duration);
     freeDoubleMatrix(mat);
     return 0;
 }

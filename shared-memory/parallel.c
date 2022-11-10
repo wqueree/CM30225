@@ -6,55 +6,10 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <assert.h>
+#include <time.h>
+#include "utils.h"
 
-#define PRECISION 0.01
-#define THREADS 4
-
-typedef struct MatrixLocation {
-    long i;
-    long j;
-} MatrixLocation;
-
-typedef struct RelaxationBatch {
-    size_t batchLength;
-    MatrixLocation* matrixLocations;
-    pthread_mutex_t mat_mtx;
-    double** mat;
-    double** temp;
-    bool stop;
-} RelaxationBatch;
-
-void logSquareDoubleMatrix(double** mat, size_t size) {
-    for (size_t i = 0; i < size; i++) {
-        for (size_t j = 0; j < size; j++) {
-            printf("%.2lf ", mat[i][j]);
-        }
-        printf("\n");
-    }
-    printf("\n");
-}
-
-double** initDoubleMatrix(size_t size) {
-    double** mat = (double**) malloc(size * sizeof(double*));
-    double* matBuf = malloc(size * size * sizeof(double));
-    for (size_t i = 0; i < size; i++) {
-        mat[i] = (size * i) + matBuf;
-    }
-    return mat;
-}
-
-void freeDoubleMatrix(double** mat) {
-    free(mat[0]);
-    free(mat);
-}
-
-double doubleMean(double mat[], size_t n) {
-    double matSum = 0.0;
-    for (size_t i = 0; i < n; i++) {
-        matSum += mat[i];
-    }
-    return matSum / (double) n;
-}
+#define THREADS 8
 
 long* calculateBatchLengths(size_t size) {
     long n = (long) ((size - 2) * (size - 2));
@@ -91,16 +46,6 @@ void* manageThread(void* voidBatch) {
         }
     }
     return NULL;
-}
-
-double** doubleMatrixDeepCopy(double** mat, size_t size) {
-    double** copy = (double**) initDoubleMatrix(size);
-    for (size_t i = 0; i < size; i++) {
-        for (size_t j = 0; j < size; j++) {
-            copy[i][j] = mat[i][j];
-        }
-    }
-    return copy;
 }
 
 MatrixLocation** initBatchMatrixLocations(long* batchLengths) {
@@ -165,12 +110,12 @@ bool relaxationStep(double** mat, size_t size, pthread_mutex_t mat_mtx) {
     return stop;
 }
 
-void relaxation(double** mat, size_t size, pthread_mutex_t mat_mtx) {
+void relaxation(double** mat, size_t size, pthread_mutex_t mat_mtx, bool logging) {
     bool stop = false;
-    logSquareDoubleMatrix(mat, size);
+    if (logging) logSquareDoubleMatrix(mat, size);
     while (!stop) {
         stop = relaxationStep(mat, size, mat_mtx);
-        logSquareDoubleMatrix(mat, size);
+        if (logging) logSquareDoubleMatrix(mat, size);
     }
 }
 
@@ -183,6 +128,7 @@ int main(int argc, char** argv) {
     fscanf(dataFile, "%ld", &size);
 
     double** mat = initDoubleMatrix(size);
+    // pthread_mutex_t** mtxMat = initMutexMatrix(size);
 
     for (size_t i = 0; i < size; i++) {
         for (size_t j = 0; j < size; j++) {
@@ -195,7 +141,18 @@ int main(int argc, char** argv) {
     pthread_mutex_t mat_mtx;
     pthread_mutex_init(&mat_mtx, NULL);
 
-    relaxation(mat, size, mat_mtx);
+    struct timespec start, stop, delta;
+
+    clock_gettime(CLOCK_REALTIME, &start);
+    relaxation(mat, size, mat_mtx, LOGGING);
+    clock_gettime(CLOCK_REALTIME, &stop);
+
+    timespecDifference(start, stop, &delta);
+
+    double duration = doubleTime(delta);
+
+    logDuration(size, duration);
     freeDoubleMatrix(mat);
+    // freeMutexMatrix(mtxMat);
     return 0;
 }
