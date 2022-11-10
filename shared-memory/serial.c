@@ -1,9 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
-#include <string.h>
-#include <time.h>
 #include "utils.h"
 
 bool relaxationStep(double** mat, size_t size) {
