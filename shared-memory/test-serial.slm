@@ -24,4 +24,4 @@
 #SBATCH --mail-user=wlq20@bath.ac.uk
  
 # Run the application
-./serial
+./serial test-data/4.txt

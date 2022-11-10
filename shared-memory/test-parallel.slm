@@ -9,8 +9,8 @@
 #SBATCH --error=test-parallel.err
  
 # Set the number of nodes and partition
-#SBATCH --nodes=2
-#SBATCH --ntasks-per-node=1
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=44
 #SBATCH --partition=iteaching
 
  
@@ -24,4 +24,4 @@
 #SBATCH --mail-user=wlq20@bath.ac.uk
  
 # Run the application
-./parallel
+./parallel test-data/4.txt
