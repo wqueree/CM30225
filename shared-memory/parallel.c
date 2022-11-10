@@ -3,7 +3,7 @@
 #include <assert.h>
 #include "utils.h"
 
-#define THREADS 8
+#define THREADS 88
 
 long* calculateBatchLengths(size_t size) {
     long n = (long) ((size - 2) * (size - 2));
