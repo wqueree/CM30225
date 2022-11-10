@@ -24,4 +24,4 @@
 #SBATCH --mail-user=wlq20@bath.ac.uk
  
 # Run the application
-./parallel test-data/1024.txt
+./parallel test-data/2048.txt
