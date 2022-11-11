@@ -3,16 +3,14 @@
 #include <assert.h>
 #include "utils.h"
 
-#define THREADS 88
-
-long* calculateBatchLengths(size_t size) {
+long* calculateBatchLengths(size_t size, size_t n_threads) {
     long n = (long) ((size - 2) * (size - 2));
-    long* batchLengths = (long*) calloc(THREADS, sizeof(long));
-    long floor = n / THREADS;
-    for (size_t i = 0; i < THREADS; i++) {
+    long* batchLengths = (long*) calloc(n_threads, sizeof(long));
+    long floor = n / (long) n_threads;
+    for (size_t i = 0; i < n_threads; i++) {
         batchLengths[i] = floor;
     }
-    batchLengths[0] += n % THREADS;
+    batchLengths[0] += n % (long) n_threads;
     return batchLengths;
 }
 
@@ -42,16 +40,16 @@ void* manageThread(void* voidBatch) {
     return NULL;
 }
 
-MatrixLocation** initBatchMatrixLocations(long* batchLengths) {
-    MatrixLocation** batchMatrixLocations = (MatrixLocation**) malloc(THREADS * sizeof(MatrixLocation*));
-    for (size_t i = 0; i < THREADS; i++) {
+MatrixLocation** initBatchMatrixLocations(long* batchLengths, size_t n_threads) {
+    MatrixLocation** batchMatrixLocations = (MatrixLocation**) malloc(n_threads * sizeof(MatrixLocation*));
+    for (size_t i = 0; i < n_threads; i++) {
         batchMatrixLocations[i] = (MatrixLocation*) malloc((size_t) batchLengths[i] * sizeof(MatrixLocation));
     }
     return batchMatrixLocations;
 }
 
-void freeBatchMatrixLocations(MatrixLocation** batchMatrixLocations) {
-    for (size_t i = 0; i < THREADS; i++) {
+void freeBatchMatrixLocations(MatrixLocation** batchMatrixLocations, size_t n_threads) {
+    for (size_t i = 0; i < n_threads; i++) {
         free(batchMatrixLocations[i]);
     }
     free(batchMatrixLocations);
@@ -72,16 +70,16 @@ void calculateBatchMatrixLocations(MatrixLocation** batchMatrixLocations, long* 
     }
 }
 
-bool relaxationStep(double** mat, size_t size, pthread_mutex_t mat_mtx) {
+bool relaxationStep(double** mat, size_t size, pthread_mutex_t mat_mtx, size_t n_threads) {
     double** temp = doubleMatrixDeepCopy(mat, size);
     bool stop = true;
-    pthread_t threads[THREADS];
-    long* batchLengths = calculateBatchLengths(size);
-    MatrixLocation** batchMatrixLocations = (MatrixLocation**) initBatchMatrixLocations(batchLengths);
+    pthread_t threads[n_threads];
+    long* batchLengths = calculateBatchLengths(size, n_threads);
+    MatrixLocation** batchMatrixLocations = (MatrixLocation**) initBatchMatrixLocations(batchLengths, n_threads);
     calculateBatchMatrixLocations(batchMatrixLocations, batchLengths, size);
-    RelaxationBatch* batches[THREADS];
+    RelaxationBatch* batches[n_threads];
 
-    for (size_t i = 0; i < THREADS; i++) {
+    for (size_t i = 0; i < n_threads; i++) {
         batches[i] = (RelaxationBatch*) malloc(sizeof(RelaxationBatch));
         batches[i]->batchLength = (size_t) batchLengths[i];
         batches[i]->matrixLocations = batchMatrixLocations[i];
@@ -91,7 +89,7 @@ bool relaxationStep(double** mat, size_t size, pthread_mutex_t mat_mtx) {
         batches[i]->stop = true;
         assert(pthread_create(&threads[i], NULL, manageThread, (void*) batches[i]) == 0);
     }
-    for (int i = 0; i < THREADS; i++) {
+    for (size_t i = 0; i < n_threads; i++) {
         pthread_join(threads[i], NULL);
         if (!batches[i]->stop) {
             stop = false;
@@ -100,21 +98,23 @@ bool relaxationStep(double** mat, size_t size, pthread_mutex_t mat_mtx) {
     }
     freeDoubleMatrix(temp);
     free(batchLengths);
-    freeBatchMatrixLocations(batchMatrixLocations);
+    freeBatchMatrixLocations(batchMatrixLocations, n_threads);
     return stop;
 }
 
-void relaxation(double** mat, size_t size, pthread_mutex_t mat_mtx, bool logging) {
+void relaxation(double** mat, size_t size, pthread_mutex_t mat_mtx, size_t n_threads, bool logging) {
     bool stop = false;
     if (logging) logSquareDoubleMatrix(mat, size);
     while (!stop) {
-        stop = relaxationStep(mat, size, mat_mtx);
+        stop = relaxationStep(mat, size, mat_mtx, n_threads);
         if (logging) logSquareDoubleMatrix(mat, size);
     }
 }
 
 int main(int argc, char** argv) {
     char* dataFilePath = argv[1];
+    size_t n_threads = (size_t) atol(argv[2]);
+
     FILE* dataFile = fopen(dataFilePath, "r");
 
     size_t size = 0;
@@ -138,14 +138,14 @@ int main(int argc, char** argv) {
     struct timespec start, stop, delta;
 
     clock_gettime(CLOCK_REALTIME, &start);
-    relaxation(mat, size, mat_mtx, LOGGING);
+    relaxation(mat, size, mat_mtx, n_threads, LOGGING);
     clock_gettime(CLOCK_REALTIME, &stop);
 
     timespecDifference(start, stop, &delta);
 
     double duration = doubleTime(delta);
 
-    logDuration(size, duration);
+    logDuration(size, duration, n_threads);
     freeDoubleMatrix(mat);
     // freeMutexMatrix(mtxMat);
     return 0;

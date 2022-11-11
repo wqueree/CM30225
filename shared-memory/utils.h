@@ -90,8 +90,8 @@ void timespecDifference(struct timespec start, struct timespec stop, struct time
     }
 }
 
-void logDuration(size_t size, double duration) {
-    printf("%ldx%ld matrix converged at precision %lf in %lfs\n", size, size, PRECISION, duration);
+void logDuration(size_t size, double duration, size_t threads) {
+    printf("%ldx%ld matrix converged at precision %lf in %lfs using %ld threads\n", size, size, PRECISION, duration, threads);
 }
 
 double doubleTime(struct timespec delta) {
