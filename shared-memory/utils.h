@@ -22,7 +22,6 @@ typedef struct ReadBatch {
 typedef struct WriteBatch {
     size_t batchLength;
     MatrixLocation* matrixLocations;
-    pthread_mutex_t** mtxMat;
     double** mat;
     double** copy;
     bool stop;

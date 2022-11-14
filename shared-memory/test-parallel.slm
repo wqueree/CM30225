@@ -4,12 +4,12 @@
 #SBATCH --account=cm30225
  
 # Set name of job
-#SBATCH --job-name=mtx160-1
-#SBATCH --output=mtx160-1.out
-#SBATCH --error=mtx160-1.err
+#SBATCH --job-name=40-nomtx
+#SBATCH --output=40-nomtx.out
+#SBATCH --error=40-nomtx.err
  
 # Set the number of nodes and partition
-#SBATCH --nodes=4
+#SBATCH --nodes=1
 #SBATCH --ntasks-per-node=40
 #SBATCH --partition=teaching
 
@@ -24,4 +24,4 @@
 #SBATCH --mail-user=wlq20@bath.ac.uk
  
 # Run the application
-./parallel test-data/2048.txt 160
+./parallel test-data/2048.txt 40
