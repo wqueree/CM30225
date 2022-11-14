@@ -86,7 +86,7 @@ MatrixLocation** initBatchMatrixLocations(long* batchLengths, size_t n_threads) 
     return batchMatrixLocations;
 }
 
-void freeWriteBatchMatrixLocations(MatrixLocation** batchMatrixLocations, size_t n_threads) {
+void freeBatchMatrixLocations(MatrixLocation** batchMatrixLocations, size_t n_threads) {
     for (size_t i = 0; i < n_threads; i++) {
         free(batchMatrixLocations[i]);
     }
@@ -145,9 +145,7 @@ bool relaxationStep(double** mat, double** copy, size_t size, long* readBatchLen
         }
         free(batches[i]);
     }
-    freeDoubleMatrix(copy);
-    free(writeBatchLengths);
-    freeWriteBatchMatrixLocations(writeBatchMatrixLocations, n_threads);
+
     return stop;
 }
 
@@ -172,6 +170,11 @@ void relaxation(double** mat, size_t size, size_t n_threads, bool logging) {
         if (logging) logSquareDoubleMatrix(mat, size);
     }
 
+    freeDoubleMatrix(copy);
+    free(writeBatchLengths);
+    freeBatchMatrixLocations(writeBatchMatrixLocations, n_threads);
+    free(readBatchLengths);
+    freeBatchMatrixLocations(readBatchMatrixLocations, n_threads);
     freeMutexMatrix(mtxMat);
 }
 

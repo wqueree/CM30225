@@ -4,9 +4,9 @@
 #SBATCH --account=cm30225
  
 # Set name of job
-#SBATCH --job-name=s-3
-#SBATCH --output=s-3.out
-#SBATCH --error=s-3.err
+#SBATCH --job-name=s-1
+#SBATCH --output=s-1.out
+#SBATCH --error=s-1.err
  
 # Set the number of nodes and partition
 #SBATCH --nodes=1

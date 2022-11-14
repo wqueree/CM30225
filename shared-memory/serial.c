@@ -2,44 +2,43 @@
 #include <math.h>
 #include "utils.h"
 
-double** doubleMatrixDeepCopy(double** mat, size_t size) {
-    double** copy = (double**) initDoubleMatrix(size);
+void doubleMatrixDeepCopy(double** mat, double** copy, size_t size) {
     for (size_t i = 0; i < size; i++) {
         for (size_t j = 0; j < size; j++) {
             copy[i][j] = mat[i][j];
         }
     }
-    return copy;
 }
 
-bool relaxationStep(double** mat, size_t size) {
-    double** temp = doubleMatrixDeepCopy(mat, size);
+bool relaxationStep(double** mat, double** copy, size_t size) {
+    doubleMatrixDeepCopy(mat, copy, size);
     bool stop = true;
     for (size_t i = 1; i < size - 1; i++) {
         for (size_t j = 1; j < size - 1; j++) {
             double meanValues[] = {
-                temp[i - 1][j],
-                temp[i][j + 1],
-                temp[i + 1][j],
-                temp[i][j - 1]
+                copy[i - 1][j],
+                copy[i][j + 1],
+                copy[i + 1][j],
+                copy[i][j - 1]
             };
             mat[i][j] = doubleMean(meanValues, 4);
-            if (fabs(mat[i][j] - temp[i][j]) > PRECISION) {
+            if (fabs(mat[i][j] - copy[i][j]) > PRECISION) {
                 stop = false;
             }
         }
     }
-    freeDoubleMatrix(temp);
     return stop;
 }
 
 void relaxation(double** mat, size_t size, bool logging) {
     bool stop = false;
+    double** copy = initDoubleMatrix(size);
     if (logging) logSquareDoubleMatrix(mat, size);
     while (!stop) {
-        stop = relaxationStep(mat, size);
+        stop = relaxationStep(mat, copy, size);
         if (logging) logSquareDoubleMatrix(mat, size);
     }
+    freeDoubleMatrix(copy);
 }
 
 int main(int argc, char** argv) {
