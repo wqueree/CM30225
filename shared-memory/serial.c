@@ -2,6 +2,16 @@
 #include <math.h>
 #include "utils.h"
 
+double** doubleMatrixDeepCopy(double** mat, size_t size) {
+    double** copy = (double**) initDoubleMatrix(size);
+    for (size_t i = 0; i < size; i++) {
+        for (size_t j = 0; j < size; j++) {
+            copy[i][j] = mat[i][j];
+        }
+    }
+    return copy;
+}
+
 bool relaxationStep(double** mat, size_t size) {
     double** temp = doubleMatrixDeepCopy(mat, size);
     bool stop = true;
@@ -60,7 +70,7 @@ int main(int argc, char** argv) {
     timespecDifference(start, stop, &delta);
     double duration = doubleTime(delta);
 
-    logDuration(size, duration);
+    logDuration(size, duration, 0);
     freeDoubleMatrix(mat);
     return 0;
 }

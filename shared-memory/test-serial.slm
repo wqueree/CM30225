@@ -4,14 +4,14 @@
 #SBATCH --account=cm30225
  
 # Set name of job
-#SBATCH --job-name=test-serial
-#SBATCH --output=test-serial.out
-#SBATCH --error=test-serial.err
+#SBATCH --job-name=s-3
+#SBATCH --output=s-3.out
+#SBATCH --error=s-3.err
  
 # Set the number of nodes and partition
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --partition=iteaching
+#SBATCH --partition=teaching
 
  
 # Set max wallclock time

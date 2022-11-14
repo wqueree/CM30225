@@ -4,7 +4,7 @@
 
 #define BILLION 1000000000L
 
-#define LOGGING false
+#define LOGGING true
 #define PRECISION 0.01
 
 typedef struct MatrixLocation {
@@ -12,14 +12,21 @@ typedef struct MatrixLocation {
     long j;
 } MatrixLocation;
 
-typedef struct RelaxationBatch {
+typedef struct ReadBatch {
     size_t batchLength;
     MatrixLocation* matrixLocations;
-    pthread_mutex_t mat_mtx;
     double** mat;
-    double** temp;
+    double** copy;
+} ReadBatch;
+
+typedef struct WriteBatch {
+    size_t batchLength;
+    MatrixLocation* matrixLocations;
+    pthread_mutex_t** mtxMat;
+    double** mat;
+    double** copy;
     bool stop;
-} RelaxationBatch;
+} WriteBatch;
 
 double** initDoubleMatrix(size_t size) {
     double** mat = (double**) malloc(size * sizeof(double*));
@@ -57,16 +64,6 @@ pthread_mutex_t** initMutexMatrix(size_t size) {
 void freeMutexMatrix(pthread_mutex_t** mtxMat) {
     free(mtxMat[0]);
     free(mtxMat);
-}
-
-double** doubleMatrixDeepCopy(double** mat, size_t size) {
-    double** copy = (double**) initDoubleMatrix(size);
-    for (size_t i = 0; i < size; i++) {
-        for (size_t j = 0; j < size; j++) {
-            copy[i][j] = mat[i][j];
-        }
-    }
-    return copy;
 }
 
 double doubleMean(double mat[], int n) {
