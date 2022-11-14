@@ -58,6 +58,11 @@ pthread_mutex_t** initMutexMatrix(size_t size) {
     for (size_t i = 0; i < size; i++) {
         mtxMat[i] = (size * i) + mtxMatBuf;
     }
+    for (size_t i = 0; i < size; i++) {
+        for (size_t j = 0; j < size; j++) {
+            pthread_mutex_init(&mtxMat[i][j], NULL);
+        }
+    }
     return mtxMat;
 }
 
