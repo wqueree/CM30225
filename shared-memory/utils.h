@@ -4,7 +4,7 @@
 
 #define BILLION 1000000000L
 
-#define LOGGING true
+#define LOGGING false
 #define PRECISION 0.01
 
 typedef struct MatrixLocation {
