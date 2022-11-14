@@ -123,9 +123,8 @@ void calculateWriteBatchMatrixLocations(MatrixLocation** writeBatchMatrixLocatio
     }
 }
 
-bool relaxationStep(double** mat, double** copy, size_t size, long* readBatchLengths, MatrixLocation** readBatchMatrixLocations, long* writeBatchLengths, MatrixLocation** writeBatchMatrixLocations, pthread_mutex_t** mtxMat, size_t n_threads) {
+bool relaxationStep(double** mat, double** copy, size_t size, long* readBatchLengths, MatrixLocation** readBatchMatrixLocations, long* writeBatchLengths, MatrixLocation** writeBatchMatrixLocations, pthread_mutex_t** mtxMat, pthread_t* threads, size_t n_threads) {
     bool stop = true;
-    pthread_t threads[n_threads];
     doubleMatrixDeepCopy(mat, copy, n_threads, readBatchMatrixLocations, readBatchLengths);
     WriteBatch* batches[n_threads];
     for (size_t i = 0; i < n_threads; i++) {
@@ -161,12 +160,13 @@ void relaxation(double** mat, size_t size, size_t n_threads, bool logging) {
     calculateWriteBatchMatrixLocations(writeBatchMatrixLocations, writeBatchLengths, size);
 
     double** copy = initDoubleMatrix(size);
+    pthread_t threads[n_threads];
     pthread_mutex_t** mtxMat = initMutexMatrix(size);
 
     bool stop = false;
     if (logging) logSquareDoubleMatrix(mat, size);
     while (!stop) {
-        stop = relaxationStep(mat, copy, size, readBatchLengths, readBatchMatrixLocations, writeBatchLengths, writeBatchMatrixLocations, mtxMat, n_threads);
+        stop = relaxationStep(mat, copy, size, readBatchLengths, readBatchMatrixLocations, writeBatchLengths, writeBatchMatrixLocations, mtxMat, threads, n_threads);
         if (logging) logSquareDoubleMatrix(mat, size);
     }
 
