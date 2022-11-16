@@ -60,7 +60,7 @@ void* manageWriteThread(void* voidBatch) {
         i = batch->matrixLocations[k].i;
         j = batch->matrixLocations[k].j;
         if (!updateIndex(i, j, batch->mat, batch->copy)) {
-            batch->stop = false; // At least one element in batch 
+            batch->stop = false; // At least one element in batch is outside of PRECISION
         }
     }
     return NULL;
@@ -150,7 +150,7 @@ bool relaxationStep(double** mat, double** copy, size_t size, long* readBatchLen
     for (size_t i = 0; i < n_threads; i++) {
         pthread_join(threads[i], NULL);
         if (!batches[i]->stop) {
-            stop = false;
+            stop = false; // At least one matrix in batch is outside of PRECISION
         }
         free(batches[i]);
     }
@@ -159,6 +159,7 @@ bool relaxationStep(double** mat, double** copy, size_t size, long* readBatchLen
 }
 
 void relaxation(double** mat, size_t size, size_t n_threads, bool logging) {
+    // Executes the relaxation method on mat. Sets up data structures to do so.
     long* readBatchLengths = (long*) calloc(n_threads, sizeof(long));
     calculateReadBatchLengths(readBatchLengths, size, n_threads);
     MatrixLocation** readBatchMatrixLocations = (MatrixLocation**) initBatchMatrixLocations(readBatchLengths, n_threads);
@@ -174,7 +175,7 @@ void relaxation(double** mat, size_t size, size_t n_threads, bool logging) {
 
     bool stop = false;
     if (logging) logSquareDoubleMatrix(mat, size);
-    while (!stop) {
+    while (!stop) { // Until all values of the matrix are within PRECISION
         stop = relaxationStep(mat, copy, size, readBatchLengths, readBatchMatrixLocations, writeBatchLengths, writeBatchMatrixLocations, threads, n_threads);
         if (logging) logSquareDoubleMatrix(mat, size);
     }
@@ -187,8 +188,13 @@ void relaxation(double** mat, size_t size, size_t n_threads, bool logging) {
 }
 
 int main(int argc, char** argv) {
+    // Main function. Should be invoked from command line as follows:
+    // ./parallel path/to/matrix/file.txt number-of-threads
+    // An example matrix file is attached in 8.txt
     char* dataFilePath = argv[1];
     size_t n_threads = (size_t) atol(argv[2]);
+
+    // File IO
     size_t size = 0;
     FILE* dataFile = fopen(dataFilePath, "r");
 
@@ -203,6 +209,7 @@ int main(int argc, char** argv) {
 
     fclose(dataFile);
 
+    // Timing
     struct timespec start, stop, delta;
 
     clock_gettime(CLOCK_REALTIME, &start);
