@@ -4,6 +4,7 @@
 #include "utils.h"
 
 void calculateReadBatchLengths(long* readBatchLengths, size_t size, size_t n_threads) {
+    // Splits the full matrix into n_threads batches and stores them in readBatchLengths
     long n = (long) (size * size);
     long floor = n / (long) n_threads;
     for (size_t i = 0; i < n_threads; i++) {
@@ -13,6 +14,8 @@ void calculateReadBatchLengths(long* readBatchLengths, size_t size, size_t n_thr
 }
 
 void calculateWriteBatchLengths(long* writeBatchLengths, size_t size, size_t n_threads) {
+    // Splits the inner matrix into n_threads batches and stores them in writeBatchLengths
+    long n = (long) (size * size);
     long n = (long) ((size - 2) * (size - 2));
     long floor = n / (long) n_threads;
     for (size_t i = 0; i < n_threads; i++) {
@@ -22,6 +25,7 @@ void calculateWriteBatchLengths(long* writeBatchLengths, size_t size, size_t n_t
 }
 
 bool updateIndex(long i, long j, double** mat, double** copy) {
+    // Calculates the mean for an element index from its neighbours and updates in mat
     double meanValues[] = {
         copy[i - 1][j],
         copy[i][j + 1],
@@ -31,11 +35,13 @@ bool updateIndex(long i, long j, double** mat, double** copy) {
     
     mat[i][j] = doubleMean(meanValues, 4);
 
+    // true if difference beween old and new value is within PRECISION
     bool stop = fabs(mat[i][j] - copy[i][j]) < PRECISION;
     return stop;
 }
 
 void* manageReadThread(void* voidBatch) {
+    // Manages the copies from mat into copy using pthreads for some batch voidBatch
     ReadBatch* batch = (ReadBatch*) voidBatch;
     long i, j;
     for (size_t k = 0; k < batch->batchLength; k++) {
@@ -47,19 +53,21 @@ void* manageReadThread(void* voidBatch) {
 }
 
 void* manageWriteThread(void* voidBatch) {
+    // Manages the updates of mat using copy and pthreads for some voidBatch
     WriteBatch* batch = (WriteBatch*) voidBatch;
     long i, j;
     for (size_t k = 0; k < batch->batchLength; k++) {
         i = batch->matrixLocations[k].i;
         j = batch->matrixLocations[k].j;
         if (!updateIndex(i, j, batch->mat, batch->copy)) {
-            batch->stop = false;
+            batch->stop = false; // At least one element in batch 
         }
     }
     return NULL;
 }
 
 void doubleMatrixDeepCopy(double** mat, double** copy, size_t n_threads, MatrixLocation** batchMatrixLocations, long* batchLengths) {
+    // Manages the work distribution for the multithreaded matrix copy operation
     pthread_t threads[n_threads];
     ReadBatch* batches[n_threads];
     for (size_t i = 0; i < n_threads; i++) {
@@ -77,6 +85,7 @@ void doubleMatrixDeepCopy(double** mat, double** copy, size_t n_threads, MatrixL
 }
 
 MatrixLocation** initBatchMatrixLocations(long* batchLengths, size_t n_threads) {
+    // Allocates memory for the set of locations in the matrix for each batch (and hence each thread)
     MatrixLocation** batchMatrixLocations = (MatrixLocation**) malloc(n_threads * sizeof(MatrixLocation*));
     for (size_t i = 0; i < n_threads; i++) {
         batchMatrixLocations[i] = (MatrixLocation*) malloc((size_t) batchLengths[i] * sizeof(MatrixLocation));
@@ -85,6 +94,7 @@ MatrixLocation** initBatchMatrixLocations(long* batchLengths, size_t n_threads) 
 }
 
 void freeBatchMatrixLocations(MatrixLocation** batchMatrixLocations, size_t n_threads) {
+    // Frees memory allocated by initBatchMatrixLocations
     for (size_t i = 0; i < n_threads; i++) {
         free(batchMatrixLocations[i]);
     }
@@ -92,6 +102,7 @@ void freeBatchMatrixLocations(MatrixLocation** batchMatrixLocations, size_t n_th
 }
 
 void calculateReadBatchMatrixLocations(MatrixLocation** readBatchMatrixLocations, long* readBatchLengths, size_t size) {
+    // Calculates matrix locations for full matrix and writes to readBatchMatrixLocations
     size_t batchNumber = 0;
     size_t batchProcessed = 0;
     for (long i = 0; i < (long) size; i++) {
@@ -107,6 +118,7 @@ void calculateReadBatchMatrixLocations(MatrixLocation** readBatchMatrixLocations
 }
 
 void calculateWriteBatchMatrixLocations(MatrixLocation** writeBatchMatrixLocations, long* writeBatchLengths, size_t size) {
+    // Calculates matrix locations for inner matrix and writes to writeBatchMatrixLocations
     size_t batchNumber = 0;
     size_t batchProcessed = 0;
     for (long i = 1; i < (long) size - 1; i++) {
@@ -122,7 +134,8 @@ void calculateWriteBatchMatrixLocations(MatrixLocation** writeBatchMatrixLocatio
 }
 
 bool relaxationStep(double** mat, double** copy, size_t size, long* readBatchLengths, MatrixLocation** readBatchMatrixLocations, long* writeBatchLengths, MatrixLocation** writeBatchMatrixLocations, pthread_t* threads, size_t n_threads) {
-    bool stop = true;
+    // Completes one iteration of the relaxation method in parallel
+    bool stop = true; // Indicates if iteration should be stopped (if all values are within PRECISION of previous)
     doubleMatrixDeepCopy(mat, copy, n_threads, readBatchMatrixLocations, readBatchLengths);
     WriteBatch* batches[n_threads];
     for (size_t i = 0; i < n_threads; i++) {
