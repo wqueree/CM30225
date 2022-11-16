@@ -3,6 +3,7 @@
 #include "utils.h"
 
 void doubleMatrixDeepCopy(double** mat, double** copy, size_t size) {
+    // Creates copy of double matrix serially.
     for (size_t i = 0; i < size; i++) {
         for (size_t j = 0; j < size; j++) {
             copy[i][j] = mat[i][j];
@@ -11,6 +12,7 @@ void doubleMatrixDeepCopy(double** mat, double** copy, size_t size) {
 }
 
 bool relaxationStep(double** mat, double** copy, size_t size) {
+    // Completes one step of the relaxation method.
     doubleMatrixDeepCopy(mat, copy, size);
     bool stop = true;
     for (size_t i = 1; i < size - 1; i++) {
@@ -23,7 +25,7 @@ bool relaxationStep(double** mat, double** copy, size_t size) {
             };
             mat[i][j] = doubleMean(meanValues, 4);
             if (fabs(mat[i][j] - copy[i][j]) > PRECISION) {
-                stop = false;
+                stop = false; // At least one element in the matrix is outside PRECISION
             }
         }
     }
@@ -34,7 +36,7 @@ void relaxation(double** mat, size_t size, bool logging) {
     bool stop = false;
     double** copy = initDoubleMatrix(size);
     if (logging) logSquareDoubleMatrix(mat, size);
-    while (!stop) {
+    while (!stop) { // While values are outside of PRECISION
         stop = relaxationStep(mat, copy, size);
         if (logging) logSquareDoubleMatrix(mat, size);
     }
@@ -42,10 +44,12 @@ void relaxation(double** mat, size_t size, bool logging) {
 }
 
 int main(int argc, char** argv) {
-
+    // Should be invoked from command line as follows:
+    // ./serial path/to/test/file.txt
     char* dataFilePath = argv[1];
     FILE* dataFile = fopen(dataFilePath, "r");
 
+    // File IO
     size_t size = 0;
 
     fscanf(dataFile, "%ld", &size);
@@ -60,6 +64,7 @@ int main(int argc, char** argv) {
 
     fclose(dataFile);
 
+    // Timing
     struct timespec start, stop, delta;
 
     clock_gettime(CLOCK_REALTIME, &start);
