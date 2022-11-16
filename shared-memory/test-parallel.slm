@@ -1,19 +1,19 @@
 #!/bin/bash
- 
+
 # Set the account to be used for the job
 #SBATCH --account=cm30225
  
 # Set name of job
-#SBATCH --job-name=test-parallel
-#SBATCH --output=test-parallel.out
-#SBATCH --error=test-parallel.err
+#SBATCH --job-name=40-nomtx
+#SBATCH --output=40-nomtx.out
+#SBATCH --error=40-nomtx.err
  
 # Set the number of nodes and partition
-#SBATCH --nodes=2
-#SBATCH --ntasks-per-node=44
-#SBATCH --partition=iteaching
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=40
+#SBATCH --partition=teaching
 
- 
+
 # Set max wallclock time
 #SBATCH --time=00:20:00
  
@@ -24,4 +24,4 @@
 #SBATCH --mail-user=wlq20@bath.ac.uk
  
 # Run the application
-./parallel test-data/2048.txt
+./parallel test-data/2048.txt 40
