@@ -50,3 +50,12 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Log Files
+*.out
+*.err
+
+# Compiled files
+serial
+scratch
+parallel
