@@ -5,6 +5,11 @@
         "compare": "c",
         "limits": "c",
         "new": "c",
-        "cmath": "c"
+        "cmath": "c",
+        "math.h": "c",
+        "stdio.h": "c",
+        "stdlib.h": "c",
+        "time.h": "c",
+        "utils.h": "c"
     }
 }
