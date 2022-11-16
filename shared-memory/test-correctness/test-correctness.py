@@ -1,3 +1,4 @@
+import os
 import filecmp
 import subprocess
 import numpy as np
@@ -25,8 +26,12 @@ def relaxation_test(test_data_filename: Path):
     with open(serial_result_path, "w") as serial_result:
         subprocess.call(["../serial", str(test_data_filename)], stdout=serial_result)
     with open(parallel_result_path, "w") as parallel_result:
-        subprocess.call(["../parallel", str(test_data_filename)], stdout=parallel_result)
-    return filecmp.cmp(serial_result_path, parallel_result_path, shallow=False)
+        subprocess.call(["../parallel", str(test_data_filename), "2"], stdout=parallel_result)
+    equal = filecmp.cmp(serial_result_path, parallel_result_path, shallow=False)
+    os.remove(serial_result_path)
+    os.remove(parallel_result_path)
+    os.remove(test_data_filename)
+    return equal
 
 def test_correctness(runs: int):
     results = []
@@ -36,4 +41,4 @@ def test_correctness(runs: int):
         results.append(relaxation_test(test_data_filename))
     return results
 
-print(test_correctness(runs=1))
+print(test_correctness(runs=10))
