@@ -15,7 +15,6 @@ void calculateReadBatchLengths(long* readBatchLengths, size_t size, size_t n_thr
 
 void calculateWriteBatchLengths(long* writeBatchLengths, size_t size, size_t n_threads) {
     // Splits the inner matrix into n_threads batches and stores them in writeBatchLengths
-    long n = (long) (size * size);
     long n = (long) ((size - 2) * (size - 2));
     long floor = n / (long) n_threads;
     for (size_t i = 0; i < n_threads; i++) {
