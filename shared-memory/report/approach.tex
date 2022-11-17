@@ -1,0 +1,31 @@
+\section{Approach}
+
+\subsection{General Strategy}
+
+To make it possible to benchmark the parallel solution, in the first instance, a fully serial implementation was developed. This used a \texttt{for} loop to iterate over the "inner" elements in the matrix and replace each of these with the average of its four neighbours. This will serve as the ground truth method to measure the parallel implementation against. The precision, $\theta$, is defined as \texttt{PRECISION} using a preprocessor directive. The serial and parallel implementations are submitted as \texttt{serial.c} and \texttt{parallel.c} respectively. A header file, \texttt{utils.h}, is also implemented for functionality shared across the two implementations.
+
+The basis of the approach is a \texttt{while} loop which continues to iterate until the value of the boolean \texttt{stop} evaluates to \texttt{true}. This occurs when the value of each element in the main matrix is within $\theta$ of its value in the previous iteration.
+
+\subsection{Correctness Testing}
+
+To establish the correctness of my parallel implementation, a Python script was created to randomly generate square, floating-point matrices. It was then possible to call both the serial and parallel implementations on the same data, write the outputs of each to a file, and compare the resulting files using Python's built-in \texttt{filecmp} library. The correctness of the serial implementation was established by testing manually on some very small matrices. The script used to compare the serial and parallel implementations is included in the submission as \texttt{test-correctness.py}. Note that for this script to be run, NumPy \cite{harris2020array} is required. This script should be saved in a subdirectory of the project root. The project root should contain the C source files and compiled binaries.
+
+\subsection{Benchmark Testing} \label{section:benchmark}
+
+The implementations were benchmarked using a randomly initialised $2048\times2048$ matrix (this particular matrix was used consistently across runs to ensure fairness). $n=2048$ was chosen as it would be sufficiently large to test Speedup, $S_p$; and Efficiency, $E_p$, as defined in Equations \ref{eqn:Sp} and \ref{eqn:Ep} respectively. To enable the use of these metrics, the serial implementation was run for three repeats. This resulted in an average observed elapsed time, $t_s=574.550$ s. $t_p$ is the observed elapsed time on $p$ parallel processors. The values used for $p$ vary according to the test in question. The effectiveness of the solution can also be measured using the Karp-Flatt metric \cite{10.1145/78607.78614}, $e$, which measures the serial part of a computation. This is defined in Equation \ref{eqn:e}.
+
+\begin{equation} \label{eqn:Sp}
+S_p = \frac{t_s}{t_p}
+\end{equation}
+
+\begin{equation} \label{eqn:Ep}
+E_p = \frac{t_s}{pt_p} = \frac{S_p}{p}
+\end{equation}
+
+\begin{equation} \label{eqn:e}
+e = \frac{\frac{1}{S_p}-\frac{1}{p}}{1-\frac{1}{p}}
+\end{equation}
+
+\subsection{Scalability Testing}
+
+The scalability of my final implementation was tested using the method described in Section \ref{section:benchmark} across matrices for $n\in\{256, 512, 1024, 2048\}$ and $p\in\{1, 5, 10, 15, 20, 25, 30, 35, 40\}$.

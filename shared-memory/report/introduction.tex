@@ -1,0 +1,23 @@
+\section{Introduction}
+
+This coursework seeks to implement, in parallel, the relaxation technique for solving differential equations. Repeating the definition in the problem statement, this takes all non-boundary elements in an $n\times n$ matrix, and sets their values to the average of their 4 neighbours. The process is iteratively repeated until every value is within some precision, $\theta$, of the previous iteration. This means that performing one iteration of this method on $A$ results in $A'$, as shown in Equations \ref{eqn1} and \ref{eqn2}.
+
+\begin{equation} \label{eqn1}
+A=\begin{bmatrix}
+1.00 & 0.00 & 0.00 & 0.00\\
+1.00 & 0.00 & 0.00 & 0.00\\
+1.00 & 0.00 & 0.00 & 0.00\\
+1.00 & 1.00 & 1.00 & 1.00\\
+\end{bmatrix}
+\end{equation}
+
+\begin{equation} \label{eqn2}
+A'=\begin{bmatrix}
+1.00 & 0.00 & 0.00 & 0.00\\
+1.00 & 0.25 & 0.00 & 0.00\\
+1.00 & 0.50 & 0.25 & 0.00\\
+1.00 & 1.00 & 1.00 & 1.00\\
+\end{bmatrix}
+\end{equation}
+
+The solution will be developed using the C programming language, with the help of the \texttt{pthread}s and their associated parallelisation primitives to ensure safe memory access.
