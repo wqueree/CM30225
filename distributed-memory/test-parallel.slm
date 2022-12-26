@@ -9,8 +9,8 @@
 #SBATCH --error=t.err
  
 # Set the number of nodes and partition
-#SBATCH --nodes=2
-#SBATCH --ntasks-per-node=2
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=44
 #SBATCH --partition=teaching
 
 

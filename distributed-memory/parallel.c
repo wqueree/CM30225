@@ -6,6 +6,12 @@
 #include <mpi.h>
 #include "utils.h"
 
+void relaxation(double** mat, size_t size, size_t n_threads, bool logging) {
+    for (size_t i = 1; i < size - 1; i++) {
+        
+    }
+}
+
 int main(int argc, char** argv) {
     // Main function. Should be invoked from command line as follows:
     // ./parallel path/to/matrix/file.txt number-of-threads
@@ -28,7 +34,6 @@ int main(int argc, char** argv) {
     fclose(dataFile);
 
     // MPI Setup
-
     char name[MPI_MAX_PROCESSOR_NAME];
 
     int mpi_init_rc = MPI_Init(&argc, &argv);
@@ -52,20 +57,22 @@ int main(int argc, char** argv) {
     MPI_Finalize();
 
     // Timing
-    struct timespec start, stop, delta;
+    if (mpi_rank == 0) {
+        struct timespec start, stop, delta;
 
-    clock_gettime(CLOCK_REALTIME, &start);
-    // relaxation(mat, size, n_threads, LOGGING);
-    for (int i = 0; i < 100000; i++) {
-        3+4;
+        clock_gettime(CLOCK_REALTIME, &start);
+        relaxation(mat, size, n_threads, LOGGING);
+        for (int i = 0; i < 100000; i++) {
+            3+4;
+        }
+        clock_gettime(CLOCK_REALTIME, &stop);
+
+        timespecDifference(start, stop, &delta);
+
+        double duration = doubleTime(delta);
+
+        logDuration(size, duration, n_threads);
+        freeDoubleMatrix(mat);
     }
-    clock_gettime(CLOCK_REALTIME, &stop);
-
-    timespecDifference(start, stop, &delta);
-
-    double duration = doubleTime(delta);
-
-    logDuration(size, duration, n_threads);
-    freeDoubleMatrix(mat);
     return 0;
 }
