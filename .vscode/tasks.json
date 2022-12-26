@@ -2,15 +2,14 @@
     "tasks": [
         {
             "type": "cppbuild",
-            "label": "C/C++: gcc build active file",
-            "command": "gcc",
+            "label": "C/C++: mpicc build active file",
+            "command": "mpicc",
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
                 "${file}",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}",
-                "-lpthread",
                 "-Wall",
                 "-Wextra",
                 "-Wconversion"
