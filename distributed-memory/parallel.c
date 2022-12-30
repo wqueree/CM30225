@@ -8,7 +8,7 @@
 
 void relaxation(double** mat, size_t size, size_t n_threads, bool logging) {
     for (size_t i = 1; i < size - 1; i++) {
-        
+        // For row in the matrix
     }
 }
 
