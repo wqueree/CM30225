@@ -6,10 +6,20 @@
 #include <mpi.h>
 #include "utils.h"
 
-void relaxation(double** mat, size_t size, size_t n_threads, bool logging) {
-    for (size_t i = 1; i < size - 1; i++) {
-        // For row in the matrix
+void calculateProcessorChunks(long* processorChunks, size_t size, size_t n_chunks) {
+    long floor = size / (long) n_chunks;
+    for (size_t i = 0; i < n_chunks - 1; i++) {
+        processorChunks[i] = floor;
     }
+    processorChunks[n_chunks - 1] += size % (long) n_chunks;
+}
+
+void relaxation(double** mat, size_t size, size_t n_processors, bool logging) {
+    size_t n_chunks = n_processors - 1;
+    long processorChunks[n_chunks];
+    calculateProcessorChunks(processorChunks, size, n_chunks);
+
+
 }
 
 int main(int argc, char** argv) {
@@ -17,7 +27,7 @@ int main(int argc, char** argv) {
     // ./parallel path/to/matrix/file.txt number-of-threads
     // An example matrix file is attached in 8.txt
     char* dataFilePath = argv[1];
-    size_t n_threads = (size_t) atol(argv[2]);
+    size_t n_processors = (size_t) atol(argv[2]);
 
     // File IO
     size_t size = 0;
@@ -38,7 +48,7 @@ int main(int argc, char** argv) {
 
     int mpi_init_rc = MPI_Init(&argc, &argv);
     if (mpi_init_rc != MPI_SUCCESS) {
-        printf ("Error starting MPI program\n");
+        printf ("Error starting MPI program.\n");
         MPI_Abort(MPI_COMM_WORLD, mpi_init_rc);
     }
 
@@ -50,9 +60,9 @@ int main(int argc, char** argv) {
     if (mpi_rank == 0) {
         printf("main reports %d procs\n", nproc);
     }
-    namelen = MPI_MAX_PROCESSOR_NAME;
-    MPI_Get_processor_name(name, &namelen);
-    printf("hello world %d from %s\n", mpi_rank, name);
+    // namelen = MPI_MAX_PROCESSOR_NAME;
+    // MPI_Get_processor_name(name, &namelen);
+    // printf("hello world %d from %s\n", mpi_rank, name);
 
     MPI_Finalize();
 
@@ -61,7 +71,7 @@ int main(int argc, char** argv) {
         struct timespec start, stop, delta;
 
         clock_gettime(CLOCK_REALTIME, &start);
-        relaxation(mat, size, n_threads, LOGGING);
+        relaxation(mat, size, n_processors, LOGGING);
         for (int i = 0; i < 100000; i++) {
             3+4;
         }
@@ -71,7 +81,7 @@ int main(int argc, char** argv) {
 
         double duration = doubleTime(delta);
 
-        logDuration(size, duration, n_threads);
+        logDuration(size, duration, n_processors);
         freeDoubleMatrix(mat);
     }
     return 0;
