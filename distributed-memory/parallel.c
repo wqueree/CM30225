@@ -14,12 +14,23 @@ void calculateProcessorChunks(long* processorChunks, size_t size, size_t n_chunk
     processorChunks[n_chunks - 1] += size % (long) n_chunks;
 }
 
-void relaxation(double** mat, size_t size, size_t n_processors, bool logging) {
-    size_t n_chunks = n_processors - 1;
-    long processorChunks[n_chunks];
-    calculateProcessorChunks(processorChunks, size, n_chunks);
+void relaxation(double** mat, size_t size, size_t n_processors, int mpi_rank, bool logging) {
+    bool stop = false;
+    while (!stop) {
+        if (mpi_rank == 0) {
+            size_t n_chunks = n_processors - 1;
+            long processorChunks[n_chunks];
+            calculateProcessorChunks(processorChunks, size, n_chunks);
+            // Send chunks to worker processors
+        }
+        else {
+            // Receive chunk
+            // Process
+            // Send back to 0
+        }
+    }
 
-
+    
 }
 
 int main(int argc, char** argv) {
@@ -66,23 +77,25 @@ int main(int argc, char** argv) {
 
     MPI_Finalize();
 
+    relaxation(mat, size, n_processors, mpi_rank, LOGGING);
+
     // Timing
-    if (mpi_rank == 0) {
-        struct timespec start, stop, delta;
 
-        clock_gettime(CLOCK_REALTIME, &start);
-        relaxation(mat, size, n_processors, LOGGING);
-        for (int i = 0; i < 100000; i++) {
-            3+4;
-        }
-        clock_gettime(CLOCK_REALTIME, &stop);
+    // while (!stop) {
+    //     if (mpi_rank == 0) {
+    // struct timespec start, stop, delta;
+    //         clock_gettime(CLOCK_REALTIME, &start);
+    //         relaxation(mat, size, n_processors, LOGGING);
 
-        timespecDifference(start, stop, &delta);
+    //         clock_gettime(CLOCK_REALTIME, &stop);
 
-        double duration = doubleTime(delta);
+    //         timespecDifference(start, stop, &delta);
 
-        logDuration(size, duration, n_processors);
-        freeDoubleMatrix(mat);
-    }
+    //         double duration = doubleTime(delta);
+
+    //         logDuration(size, duration, n_processors);
+    //         freeDoubleMatrix(mat);
+    //     }
+    // }
     return 0;
 }
