@@ -24,4 +24,4 @@
 #SBATCH --mail-user=wlq20@bath.ac.uk
  
 # Run the application
-mpirun parallel test-data/4.txt 1
+mpirun parallel ../test-data/4.txt 44
