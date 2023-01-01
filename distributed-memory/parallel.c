@@ -68,10 +68,12 @@ void relaxation(double** mat, size_t size, size_t n_processors, int mpi_rank, bo
             // Send chunks to worker processors
             for (size_t i = 0; i < n_chunks; i++) {
                 FlatMatrixChunk chunk = processorChunks[i];
-                printf("%d %d %d\n", chunk.n, chunk.m, chunk.n*chunk.m);
+                printf("\n\n%d %d %d\n", chunk.n, chunk.m, chunk.n*chunk.m);
                 for (size_t j = 0; j < chunk.n * chunk.m; j++) {
                     printf("%.2lf ", chunk.flatChunk[j]);
                 }
+                double** chunkmat = reshapeRows(chunk.flatChunk, chunk.n, chunk.m);
+                logDoubleMatrix(chunkmat, chunk.n, chunk.m);
             }
             stop = true;
             // function to break rows into 1d and send shape
