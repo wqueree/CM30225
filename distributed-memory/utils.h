@@ -14,6 +14,13 @@ typedef struct MatrixLocation {
     long j;
 } MatrixLocation;
 
+typedef struct FlatMatrixChunk {
+    size_t n;
+    size_t m;
+    size_t start_row;
+    double* flatChunk;
+} FlatMatrixChunk;
+
 typedef struct ReadBatch {
     // Defines data required to read batch from file in parallel
     size_t batchLength;
@@ -31,7 +38,7 @@ typedef struct WriteBatch {
     bool stop;
 } WriteBatch;
 
-double** initDoubleMatrix(size_t size) {
+double** initSquareDoubleMatrix(size_t size) {
     // Allocates memory for a double matrix of size*size elements
     double** mat = (double**) malloc(size * sizeof(double*));
     double* matBuf = (double*) malloc(size * size * sizeof(double));
@@ -41,10 +48,59 @@ double** initDoubleMatrix(size_t size) {
     return mat;
 }
 
+FlatMatrixChunk* flattenRows(double** mat, size_t start_row, size_t end_row, size_t row_size) {
+    // end row terminates iteration and is not included.
+    size_t num_rows = end_row - start_row;
+    double* flatChunk = (double*) malloc(num_rows * row_size * sizeof(double));
+    FlatMatrixChunk* flatMatrixChunk = (FlatMatrixChunk*) malloc(sizeof(FlatMatrixChunk));
+    for (size_t i = start_row; i < end_row; i++) {
+        for (size_t j = 0; j < row_size; j++) {
+            flatChunk[((i - start_row) * row_size) + j] = mat[i][j];
+        }
+    }
+    flatMatrixChunk->n = num_rows;
+    flatMatrixChunk->m = row_size;
+    flatMatrixChunk->start_row = start_row;
+    flatMatrixChunk->flatChunk = flatChunk;
+    return flatMatrixChunk;
+}
+
+double** initDoubleMatrix(size_t n, size_t m) {
+    // Allocates memory for a double matrix of size*size elements
+    double** mat = (double**) malloc(n * sizeof(double*));
+    double* matBuf = (double*) malloc(n * m * sizeof(double));
+    for (size_t i = 0; i < n; i++) {
+        mat[i] = (m * i) + matBuf;
+    }
+    return mat;
+}
+
+double** reshapeRows(double* flat, size_t n, size_t m) {
+    double** mat = initDoubleMatrix(n, m);
+    for (size_t i = 0; i < n; i++) {
+        for (size_t j = 0; j < m; j++) {
+            mat[i][j] = flat[(i * m) + j];
+        }
+    }
+    return mat;
+}
+
+
 void freeDoubleMatrix(double** mat) {
     // Frees memory allocated by initDoubleMatrix
     free(mat[0]);
     free(mat);
+}
+
+void logDoubleMatrix(double** mat, size_t n, size_t m) {
+    // Logs mat
+    for (size_t i = 0; i < n; i++) {
+        for (size_t j = 0; j < m; j++) {
+            printf("%.2lf ", mat[i][j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
 }
 
 void logSquareDoubleMatrix(double** mat, size_t size) {

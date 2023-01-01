@@ -10,12 +10,12 @@
  
 # Set the number of nodes and partition
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=44
+#SBATCH --ntasks-per-node=4
 #SBATCH --partition=teaching
 
 
 # Set max wallclock time
-#SBATCH --time=00:20:00
+#SBATCH --time=00:02:30
  
 # Mail alert at start, end and abortion of execution
 #SBATCH --mail-type=ALL
@@ -24,4 +24,4 @@
 #SBATCH --mail-user=wlq20@bath.ac.uk
  
 # Run the application
-mpirun parallel ../test-data/4.txt 44
+mpirun parallel ../test-data/32.txt 4

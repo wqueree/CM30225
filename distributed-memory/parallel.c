@@ -6,12 +6,44 @@
 #include <mpi.h>
 #include "utils.h"
 
-void calculateProcessorChunks(long* processorChunks, size_t size, size_t n_chunks) {
+void calculateProcessorChunkSizes(long* processorChunkRows, size_t size, size_t n_chunks) {
     long floor = size / (long) n_chunks;
-    for (size_t i = 0; i < n_chunks - 1; i++) {
-        processorChunks[i] = floor;
+    for (size_t i = 0; i < n_chunks; i++) {
+        processorChunkRows[i] = floor;
     }
-    processorChunks[n_chunks - 1] += size % (long) n_chunks;
+    processorChunkRows[n_chunks - 1] += size % (long) n_chunks;
+}
+
+void calculateProcessorChunkRows(long* processorChunkRows, long* processorChunkSizes, size_t n_chunks) {
+    processorChunkRows[0] = 0;
+    for (size_t i = 1; i < n_chunks; i++) {
+        processorChunkRows[i] = processorChunkRows[i - 1] + processorChunkSizes[i - 1];
+    }
+}
+
+void generateProcessorChunks(FlatMatrixChunk* processorChunks, long* processorChunkRows, double** mat, size_t n_chunks, size_t n, size_t m) {
+    for (size_t i = 0; i < n_chunks - 1; i++) {
+        processorChunks[i] = *flattenRows(mat, processorChunkRows[i], processorChunkRows[i + 1], m);
+    }
+    processorChunks[n_chunks - 1] = *flattenRows(mat, processorChunkRows[n_chunks - 1], n, m);
+}
+
+void doubleMatrixDeepCopy(double** mat, double** cpy, size_t n, size_t m) {
+    // Creates copy of double matrix serially.
+    for (size_t i = 0; i < n; i++) {
+        for (size_t j = 0; j < m; j++) {
+            cpy[i][j] = mat[i][j];
+        }
+    }
+}
+
+void squareDoubleMatrixDeepCopy(double** mat, double** cpy, size_t size) {
+    // Creates copy of square double matrix serially.
+    for (size_t i = 0; i < size; i++) {
+        for (size_t j = 0; j < size; j++) {
+            cpy[i][j] = mat[i][j];
+        }
+    }
 }
 
 void relaxation(double** mat, size_t size, size_t n_processors, int mpi_rank, bool logging) {
@@ -19,18 +51,39 @@ void relaxation(double** mat, size_t size, size_t n_processors, int mpi_rank, bo
     while (!stop) {
         if (mpi_rank == 0) {
             size_t n_chunks = n_processors - 1;
-            long processorChunks[n_chunks];
-            calculateProcessorChunks(processorChunks, size, n_chunks);
+            long processorChunkSizes[n_chunks];
+            long processorChunkRows[n_chunks];
+            FlatMatrixChunk processorChunks[n_chunks];
+            calculateProcessorChunkSizes(processorChunkSizes, size, n_chunks);
+            for (size_t i = 0; i < n_chunks; i++) {
+                printf("%d ", processorChunkSizes[i]);
+            }
+            printf("\n");
+            calculateProcessorChunkRows(processorChunkRows, processorChunkSizes, n_chunks);
+            for (size_t i = 0; i < n_chunks; i++) {
+                printf("%d ", processorChunkRows[i]);
+            }
+            printf("\n");
+            generateProcessorChunks(processorChunks, processorChunkRows, mat, n_chunks, size, size);
             // Send chunks to worker processors
+            for (size_t i = 0; i < n_chunks; i++) {
+                FlatMatrixChunk chunk = processorChunks[i];
+                printf("%d %d %d\n", chunk.n, chunk.m, chunk.n*chunk.m);
+                for (size_t j = 0; j < chunk.n * chunk.m; j++) {
+                    printf("%.2lf ", chunk.flatChunk[j]);
+                }
+            }
+            stop = true;
+            // function to break rows into 1d and send shape
+            // function to reshape into new matrix
         }
         else {
             // Receive chunk
             // Process
             // Send back to 0
+            stop=true;
         }
     }
-
-    
 }
 
 int main(int argc, char** argv) {
@@ -45,7 +98,7 @@ int main(int argc, char** argv) {
     FILE* dataFile = fopen(dataFilePath, "r");
 
     fscanf(dataFile, "%ld", &size);
-    double** mat = initDoubleMatrix(size);
+    double** mat = initSquareDoubleMatrix(size);
 
     for (size_t i = 0; i < size; i++) {
         for (size_t j = 0; j < size; j++) {
@@ -63,13 +116,21 @@ int main(int argc, char** argv) {
         MPI_Abort(MPI_COMM_WORLD, mpi_init_rc);
     }
 
-    int mpi_rank, mpi_size, nproc, namelen;
+    int mpi_rank, mpi_size, namelen;
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size); 
 
-    printf("%d\n", mpi_rank);
     if (mpi_rank == 0) {
-        printf("main reports %d procs\n", nproc);
+        printf("main reports %d procs\n", mpi_size);
+        relaxation(mat, size, mpi_size, mpi_rank, LOGGING);
+    }
+    else {
+        int size_buf[2];
+        MPI_Recv(size_buf, 2, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, 0);
+        int n = size_buf[0];
+        int m = size_buf[1];
+        double** mat_chunk = initDoubleMatrix(n, m);
+        MPI_Recv(mat_chunk, size*size, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, 0);
     }
     // namelen = MPI_MAX_PROCESSOR_NAME;
     // MPI_Get_processor_name(name, &namelen);
@@ -77,7 +138,6 @@ int main(int argc, char** argv) {
 
     MPI_Finalize();
 
-    relaxation(mat, size, n_processors, mpi_rank, LOGGING);
 
     // Timing
 
