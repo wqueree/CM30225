@@ -106,20 +106,16 @@ void relaxationMaster(double** mat, size_t size, int mpi_rank, size_t n_processo
             cpy[size - 1][i] = mat[size - 1][i];
         }
 
-        // TODO Implement middle row calculation
-
         stop = true; // TODO Implement stop checking
-
         if (stop) {
             if (logging) printf("%d: Sending termination signals... ", mpi_rank);
             for (size_t i = 0; i < n_chunks; i++) {
-                long sizeBuf[] = {-1, -1};
+                long sizeBuf[] = {0, 0};
                 MPI_Send(sizeBuf, 2, MPI_LONG, (int) i + 1, 0, MPI_COMM_WORLD);
             }
             if (logging) printf("done\n");
         }
         logSquareDoubleMatrix(mat, size);
-        logSquareDoubleMatrix(cpy, size);
     }
 }
 
@@ -134,6 +130,7 @@ void relaxationSlave(int mpi_rank, bool logging) {
         size_t n = (size_t) sizeBuf[0];
         size_t m = (size_t) sizeBuf[1];
         if (logging) printf("done\n");
+        printf("%d: %ld %ld\n", mpi_rank, n, m);
         if (n > 0 && m > 0) {
             if (logging) printf("%d: Receiving chunk... ", mpi_rank);
             double flat[n * m];
@@ -158,7 +155,7 @@ void relaxationSlave(int mpi_rank, bool logging) {
             free(flatResult);
         }
         else {
-            printf("%d: Received termination signal... ", mpi_rank);
+            printf("%d: Received termination signal, terminating.\n", mpi_rank);
             stop = true;
         } 
     }
@@ -196,7 +193,7 @@ int main(int argc, char** argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
     if (LOGGING) printf("done for processor %d\n", mpi_rank);
-
+    
     relaxation(dataFilePath, (size_t) mpi_size, mpi_rank, LOGGING);
     MPI_Finalize();
     return 0;
