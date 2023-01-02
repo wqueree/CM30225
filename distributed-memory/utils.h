@@ -75,6 +75,24 @@ double** initDoubleMatrix(size_t n, size_t m) {
     return mat;
 }
 
+void doubleMatrixDeepCopy(double** mat, double** cpy, size_t n, size_t m) {
+    // Creates copy of double matrix serially.
+    for (size_t i = 0; i < n; i++) {
+        for (size_t j = 0; j < m; j++) {
+            cpy[i][j] = mat[i][j];
+        }
+    }
+}
+
+void squareDoubleMatrixDeepCopy(double** mat, double** cpy, size_t size) {
+    // Creates copy of square double matrix serially.
+    for (size_t i = 0; i < size; i++) {
+        for (size_t j = 0; j < size; j++) {
+            cpy[i][j] = mat[i][j];
+        }
+    }
+}
+
 double** reshapeRows(double* flat, size_t n, size_t m) {
     double** mat = initDoubleMatrix(n, m);
     for (size_t i = 0; i < n; i++) {
