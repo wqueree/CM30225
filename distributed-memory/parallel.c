@@ -84,6 +84,7 @@ void relaxationMaster(double** mat, size_t size, size_t n_processors, bool loggi
         logSquareDoubleMatrix(cpy, size);
     }
 }
+
 void relaxationSlave() {
     bool stop = false;
     long sizeBuf[2];
@@ -115,7 +116,6 @@ void relaxationSlave() {
             freeDoubleMatrix(result);
             free(resultFlatMatrixChunk);
             free(flatResult);
-            // stop = true; // Only one iteration
         }
         else {
             stop = true;
@@ -134,10 +134,9 @@ void relaxation(double** mat, size_t size, size_t n_processors, int mpi_rank, bo
 
 int main(int argc, char** argv) {
     // Main function. Should be invoked from command line as follows:
-    // ./parallel path/to/matrix/file.txt number-of-threads
+    // ./parallel path/to/matrix/file.txt
     // An example matrix file is attached in 8.txt
     char* dataFilePath = argv[1];
-    size_t n_processors = (size_t) atol(argv[2]);
 
     // File IO
     size_t size = 0;
@@ -165,16 +164,7 @@ int main(int argc, char** argv) {
     int mpi_rank, mpi_size, namelen;
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size); 
-
-    if (mpi_rank == 0) {
-        printf("main reports %d procs\n", mpi_size);
-    }
     relaxation(mat, size, mpi_size, mpi_rank, LOGGING);
-
-    // namelen = MPI_MAX_PROCESSOR_NAME;
-    // MPI_Get_processor_name(name, &namelen);
-    // printf("hello world %d from %s\n", mpi_rank, name);
-
     MPI_Finalize();
 
 
