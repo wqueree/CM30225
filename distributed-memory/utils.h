@@ -4,15 +4,8 @@
 
 #define BILLION 1000000000L // Used in time calculations
 
-#define LOGGING false // Switch for logging
+#define LOGGING true // Switch for logging
 #define PRECISION 0.01 // Sets the precision
-
-
-typedef struct MatrixLocation {
-    // Defines indices for a location in a matrix
-    long i;
-    long j;
-} MatrixLocation;
 
 typedef struct FlatMatrixChunk {
     size_t n;
@@ -20,23 +13,6 @@ typedef struct FlatMatrixChunk {
     size_t start_row;
     double* flat;
 } FlatMatrixChunk;
-
-typedef struct ReadBatch {
-    // Defines data required to read batch from file in parallel
-    size_t batchLength;
-    MatrixLocation* matrixLocations;
-    double** mat;
-    double** copy;
-} ReadBatch;
-
-typedef struct WriteBatch {
-    // Defines data required to calculate and write data to mat in memory in parallel
-    size_t batchLength;
-    MatrixLocation* matrixLocations;
-    double** mat;
-    double** copy;
-    bool stop;
-} WriteBatch;
 
 double** initSquareDoubleMatrix(size_t size) {
     // Allocates memory for a double matrix of size*size elements
@@ -47,6 +23,20 @@ double** initSquareDoubleMatrix(size_t size) {
     }
     return mat;
 }
+
+double** inputDoubleMatrix(char* dataFilePath, size_t* size) {
+    FILE* dataFile = fopen(dataFilePath, "r");
+    fscanf(dataFile, "%ld", size);
+    double** mat = initSquareDoubleMatrix(*size);
+    for (size_t i = 0; i < *size; i++) {
+        for (size_t j = 0; j < *size; j++) {
+            fscanf(dataFile, "%lf", &mat[i][j]);
+        }
+    }
+    fclose(dataFile);
+    return mat;
+}
+
 
 FlatMatrixChunk* flattenRows(double** mat, size_t start_row, size_t end_row, size_t row_size) {
     // end row terminates iteration and is not included.
