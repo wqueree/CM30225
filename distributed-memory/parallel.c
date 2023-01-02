@@ -124,16 +124,9 @@ int main(int argc, char** argv) {
 
     if (mpi_rank == 0) {
         printf("main reports %d procs\n", mpi_size);
-        relaxation(mat, size, mpi_size, mpi_rank, LOGGING);
     }
-    else {
-        int size_buf[2];
-        MPI_Recv(size_buf, 2, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, 0);
-        int n = size_buf[0];
-        int m = size_buf[1];
-        double** mat_chunk = initDoubleMatrix(n, m);
-        MPI_Recv(mat_chunk, size*size, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, 0);
-    }
+    relaxation(mat, size, mpi_size, mpi_rank, LOGGING);
+
     // namelen = MPI_MAX_PROCESSOR_NAME;
     // MPI_Get_processor_name(name, &namelen);
     // printf("hello world %d from %s\n", mpi_rank, name);
