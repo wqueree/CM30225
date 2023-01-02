@@ -33,7 +33,7 @@ void distributeChunks(FlatMatrixChunk* processorChunks, size_t n_chunks) {
         FlatMatrixChunk chunk = processorChunks[i];
         int worker = i + 1;
         long sizeBuf[] = {chunk.n, chunk.m};
-        MPI_Send(sizeBuf, 2, MPI_LONG, worker, 0, MPI_COMM_WORLD);;
+        MPI_Send(sizeBuf, 2, MPI_LONG, worker, 0, MPI_COMM_WORLD);
         MPI_Send(chunk.flat, chunk.n * chunk.m, MPI_DOUBLE, worker, 1, MPI_COMM_WORLD);
     }
 }
@@ -46,39 +46,52 @@ void collateChunks(FlatMatrixChunk* processorChunks, size_t n_chunks) {
     }
 }
 
-void relaxation(double** mat, size_t size, size_t n_processors, int mpi_rank, bool logging) {
+void relaxationMaster(double** mat, size_t size, size_t n_processors, bool logging) {
     bool stop = false;
+    size_t n_chunks = n_processors - 1;
+    long processorChunkSizes[n_chunks];
+    long processorChunkRows[n_chunks];
+    double** cpy = initSquareDoubleMatrix(size);
+    FlatMatrixChunk processorChunks[n_chunks];
+    calculateProcessorChunkSizes(processorChunkSizes, size, n_chunks);
+    calculateProcessorChunkRows(processorChunkRows, processorChunkSizes, n_chunks);
     while (!stop) {
-        if (mpi_rank == 0) { // master
-            size_t n_chunks = n_processors - 1;
-            long processorChunkSizes[n_chunks];
-            long processorChunkRows[n_chunks];
-            FlatMatrixChunk processorChunks[n_chunks];
-            calculateProcessorChunkSizes(processorChunkSizes, size, n_chunks);
-            calculateProcessorChunkRows(processorChunkRows, processorChunkSizes, n_chunks);
-            generateProcessorChunks(processorChunks, processorChunkRows, mat, n_chunks, size, size);
-            distributeChunks(processorChunks, n_chunks); // Distribute to worker cores
-            collateChunks(processorChunks, n_chunks); // Receive completed computations from worker cores
+        generateProcessorChunks(processorChunks, processorChunkRows, mat, n_chunks, size, size);
+        distributeChunks(processorChunks, n_chunks); // Distribute to worker cores
+        collateChunks(processorChunks, n_chunks); // Receive completed computations from worker cores
 
-            // Rebuild chunks to input matrix size
-            double** cpy = initSquareDoubleMatrix(size);
-            for (size_t i = 0; i < n_chunks; i++) {
-                FlatMatrixChunk chunk = processorChunks[i];
-                for (size_t j = chunk.start_row; j < chunk.start_row + chunk.n; j++) {
-                    for (size_t k = 0; k < chunk.m; k++) {
-                        cpy[j][k] = chunk.flat[((j - chunk.start_row) * chunk.m) + k];
-                    }
+        // Rebuild chunks to input matrix size
+        for (size_t i = 0; i < n_chunks; i++) {
+            FlatMatrixChunk chunk = processorChunks[i];
+            for (size_t j = chunk.start_row; j < chunk.start_row + chunk.n; j++) {
+                for (size_t k = 0; k < chunk.m; k++) {
+                    cpy[j][k] = chunk.flat[((j - chunk.start_row) * chunk.m) + k];
                 }
             }
-            logSquareDoubleMatrix(mat, size);
-            logSquareDoubleMatrix(cpy, size);
-            stop = true; // Only one iteration.sbat
         }
-        else { // slave
-            long sizeBuf[2];
-            MPI_Recv(sizeBuf, 2, MPI_LONG, 0, 0, MPI_COMM_WORLD, 0);
-            size_t n = sizeBuf[0];
-            size_t m = sizeBuf[1];
+
+        // TODO Implement middle row calculation
+
+        stop = true; // TODO Implement stop checking
+
+        if (stop) {
+            for (size_t i = 0; i < n_chunks; i++) {
+                long sizeBuf[] = {-1, -1};
+                MPI_Send(sizeBuf, 2, MPI_LONG, i + 1, 0, MPI_COMM_WORLD);
+            }
+        }
+        logSquareDoubleMatrix(mat, size);
+        logSquareDoubleMatrix(cpy, size);
+    }
+}
+void relaxationSlave() {
+    bool stop = false;
+    long sizeBuf[2];
+    while (!stop) {
+        MPI_Recv(sizeBuf, 2, MPI_LONG, 0, 0, MPI_COMM_WORLD, 0);
+        size_t n = sizeBuf[0];
+        size_t m = sizeBuf[1];
+        if (n > 0 && m > 0) {
             double flat[n * m];
             MPI_Recv(flat, n * m, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, 0);
             double** chunk = reshapeRows(flat, n, m);
@@ -95,25 +108,27 @@ void relaxation(double** mat, size_t size, size_t n_processors, int mpi_rank, bo
                     result[i][j] = doubleMean(meanValues, 4);
                 }
             }
-
-            // logDoubleMatrix(chunk, n, m);
-            // logDoubleMatrix(result, n ,m);
-
             FlatMatrixChunk* resultFlatMatrixChunk = flattenRows(result, 0, n, m);
             double* flatResult = resultFlatMatrixChunk->flat;
-
-            // printf("\n");
-            // for (size_t j = 0; j < n * m; j++) {
-            //     printf("%.2lf ", flatResult[j]);
-            // }
-            // printf("\n");
             MPI_Send(flatResult, n * m, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD);
             freeDoubleMatrix(chunk);
             freeDoubleMatrix(result);
             free(resultFlatMatrixChunk);
             free(flatResult);
-            stop = true; // Only one iteration
+            // stop = true; // Only one iteration
         }
+        else {
+            stop = true;
+        } 
+    }
+}
+
+void relaxation(double** mat, size_t size, size_t n_processors, int mpi_rank, bool logging) {
+    if (mpi_rank == 0) {
+        relaxationMaster(mat, size, n_processors, logging);
+    }
+    else {
+        relaxationSlave();
     }
 }
 
