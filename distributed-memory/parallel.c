@@ -55,35 +55,81 @@ void relaxation(double** mat, size_t size, size_t n_processors, int mpi_rank, bo
             long processorChunkRows[n_chunks];
             FlatMatrixChunk processorChunks[n_chunks];
             calculateProcessorChunkSizes(processorChunkSizes, size, n_chunks);
-            for (size_t i = 0; i < n_chunks; i++) {
-                printf("%d ", processorChunkSizes[i]);
-            }
-            printf("\n");
             calculateProcessorChunkRows(processorChunkRows, processorChunkSizes, n_chunks);
-            for (size_t i = 0; i < n_chunks; i++) {
-                printf("%d ", processorChunkRows[i]);
-            }
-            printf("\n");
             generateProcessorChunks(processorChunks, processorChunkRows, mat, n_chunks, size, size);
-            // Send chunks to worker processors
+
+            // Distribute to worker cores
             for (size_t i = 0; i < n_chunks; i++) {
                 FlatMatrixChunk chunk = processorChunks[i];
-                printf("\n\n%d %d %d\n", chunk.n, chunk.m, chunk.n*chunk.m);
-                for (size_t j = 0; j < chunk.n * chunk.m; j++) {
-                    printf("%.2lf ", chunk.flatChunk[j]);
-                }
-                double** chunkmat = reshapeRows(chunk.flatChunk, chunk.n, chunk.m);
-                logDoubleMatrix(chunkmat, chunk.n, chunk.m);
+                int worker = i + 1;
+                long sizeBuf[] = {chunk.n, chunk.m};
+                MPI_Send(sizeBuf, 2, MPI_LONG, worker, 0, MPI_COMM_WORLD);
+                MPI_Send(chunk.flat, chunk.n * chunk.m, MPI_DOUBLE, worker, 1, MPI_COMM_WORLD);
             }
-            stop = true;
-            // function to break rows into 1d and send shape
-            // function to reshape into new matrix
+            // Receive completed computations from worker cores
+            for (size_t i = 0; i < n_chunks; i++) {
+                FlatMatrixChunk chunk = processorChunks[i];
+                int worker = i + 1;
+                MPI_Recv(chunk.flat, chunk.n * chunk.m, MPI_DOUBLE, worker, 2, MPI_COMM_WORLD, 0);
+                // printf("\n");
+                // for (size_t j = 0; j < chunk.n * chunk.m; j++) {
+                //     printf("%.2lf ", chunk.flat[j]);
+                // }
+                // printf("\n");
+            }
+            double** cpy = initSquareDoubleMatrix(size);
+            for (size_t i = 0; i < n_chunks; i++) {
+                FlatMatrixChunk chunk = processorChunks[i];
+                for (size_t j = chunk.start_row; j < chunk.start_row + chunk.n; j++) {
+                    for (size_t k = 0; k < chunk.m; k++) {
+                        cpy[j][k] = chunk.flat[((j - chunk.start_row) * chunk.m) + k];
+                    }
+                }
+            }
+
+            logSquareDoubleMatrix(mat, size);
+            logSquareDoubleMatrix(cpy, size);
+            stop = true; // Only one iteration.sbat
         }
         else {
-            // Receive chunk
-            // Process
-            // Send back to 0
-            stop=true;
+            long sizeBuf[2];
+            MPI_Recv(sizeBuf, 2, MPI_LONG, 0, 0, MPI_COMM_WORLD, 0);
+            size_t n = sizeBuf[0];
+            size_t m = sizeBuf[1];
+            double flat[n * m];
+            MPI_Recv(flat, n * m, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, 0);
+            double** chunk = reshapeRows(flat, n, m);
+            double** result = initDoubleMatrix(n, m);
+            doubleMatrixDeepCopy(chunk, result, n, m);
+            for (size_t i = 1; i < n - 1; i++) {
+                for (size_t j = 1; j < m - 1; j++) {
+                    double meanValues[] = {
+                        chunk[i - 1][j],
+                        chunk[i][j + 1],
+                        chunk[i + 1][j],
+                        chunk[i][j - 1]
+                    };
+                    result[i][j] = doubleMean(meanValues, 4);
+                }
+            }
+
+            // logDoubleMatrix(chunk, n, m);
+            // logDoubleMatrix(result, n ,m);
+
+            FlatMatrixChunk* resultFlatMatrixChunk = flattenRows(result, 0, n, m);
+            double* flatResult = resultFlatMatrixChunk->flat;
+
+            // printf("\n");
+            // for (size_t j = 0; j < n * m; j++) {
+            //     printf("%.2lf ", flatResult[j]);
+            // }
+            // printf("\n");
+            MPI_Send(flatResult, n * m, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD);
+            freeDoubleMatrix(chunk);
+            freeDoubleMatrix(result);
+            free(resultFlatMatrixChunk);
+            free(flatResult);
+            stop = true; // Only one iteration
         }
     }
 }

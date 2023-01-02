@@ -18,7 +18,7 @@ typedef struct FlatMatrixChunk {
     size_t n;
     size_t m;
     size_t start_row;
-    double* flatChunk;
+    double* flat;
 } FlatMatrixChunk;
 
 typedef struct ReadBatch {
@@ -61,7 +61,7 @@ FlatMatrixChunk* flattenRows(double** mat, size_t start_row, size_t end_row, siz
     flatMatrixChunk->n = num_rows;
     flatMatrixChunk->m = row_size;
     flatMatrixChunk->start_row = start_row;
-    flatMatrixChunk->flatChunk = flatChunk;
+    flatMatrixChunk->flat = flatChunk;
     return flatMatrixChunk;
 }
 
