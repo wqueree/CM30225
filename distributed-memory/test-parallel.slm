@@ -4,18 +4,18 @@
 #SBATCH --account=cm30225
  
 # Set name of job
-#SBATCH --job-name=t
-#SBATCH --output=t.out
-#SBATCH --error=t.err
+#SBATCH --job-name=1024
+#SBATCH --output=1024.out
+#SBATCH --error=1024.err
  
 # Set the number of nodes and partition
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=4
+#SBATCH --ntasks-per-node=44
 #SBATCH --partition=iteaching
 
 
 # Set max wallclock time
-#SBATCH --time=00:02:30
+#SBATCH --time=00:20:00
  
 # Mail alert at start, end and abortion of execution
 #SBATCH --mail-type=ALL
@@ -24,4 +24,4 @@
 #SBATCH --mail-user=wlq20@bath.ac.uk
  
 # Run the application
-mpirun parallel ../test-data/16.txt
+mpirun parallel ../test-data/1024.txt
