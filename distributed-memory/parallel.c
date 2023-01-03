@@ -93,24 +93,10 @@ void updateEdgeRows(double** mat, double** cpy, size_t n_chunks, size_t row_size
 void rebuildMatrix(double** cpy, FlatMatrixChunk* processorChunks, size_t n_chunks) {
     for (size_t i = 0; i < n_chunks; i++) {
         FlatMatrixChunk chunk = processorChunks[i];
-        // for (size_t l = 0; l < chunk.n * chunk.m; l ++) {
-        //     printf("%ld ", chunk.start_row);
-        // }
-        // for (size_t j = chunk.start_row; j < chunk.start_row + chunk.n - 1; j++) {
-        //     for (size_t k = 0; k < chunk.m; k++) {
-
-        //     }
-        // }
-        // printf("%.2lf\n\n", chunk.flat[8]);
         for (size_t j = chunk.start_row + 1; j < chunk.start_row + chunk.n - 1; j++) {
-            // printf("%.2lf\n\n", chunk.flat[8]);
             for (size_t k = 0; k < chunk.m; k++) {
-                // printf("%ld ", ((j - chunk.start_row) * chunk.m) + k);
-                // printf("%.2lf ", chunk.flat[8]); printf("%.2lf ", chunk.flat[8]); printf("%.2lf ", chunk.flat[8]);
-                // printf("<%ld>", j);
                 cpy[j][k] = chunk.flat[((j - chunk.start_row) * chunk.m) + k];
             }
-            // printf("\n");
         }
     }
 }
