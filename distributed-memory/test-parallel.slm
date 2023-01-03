@@ -4,13 +4,13 @@
 #SBATCH --account=cm30225
  
 # Set name of job
-#SBATCH --job-name=4
-#SBATCH --output=4.out
-#SBATCH --error=4.err
+#SBATCH --job-name=mpi
+#SBATCH --output=mpi.out
+#SBATCH --error=moi.err
  
 # Set the number of nodes and partition
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=2
+#SBATCH --ntasks-per-node=44
 #SBATCH --partition=iteaching
 
 
@@ -24,4 +24,4 @@
 #SBATCH --mail-user=wlq20@bath.ac.uk
  
 # Run the application
-mpirun parallel ../test-data/4.txt
+mpirun parallel ../test-data/1024.txt

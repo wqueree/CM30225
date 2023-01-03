@@ -79,7 +79,11 @@ void updateEdgeRows(double** mat, double** cpy, size_t n_chunks, size_t row_size
     for (size_t i = 1; i < n_chunks; i++) {
         long leadingEdgeRow = processorChunkRows[i];
         long trailingEdgeRow = leadingEdgeRow - 1;
-        for (size_t j = 0; j < row_size; j++) {
+        cpy[leadingEdgeRow][0] = mat[leadingEdgeRow][0];
+        cpy[leadingEdgeRow][row_size - 1] = mat[leadingEdgeRow][row_size - 1];
+        cpy[trailingEdgeRow][0] = mat[trailingEdgeRow][0];
+        cpy[trailingEdgeRow][row_size - 1] = mat[trailingEdgeRow][row_size - 1];
+        for (size_t j = 1; j < row_size - 1; j++) {
             cpy[leadingEdgeRow][j] = calculateNeighbourMean(mat, (size_t) leadingEdgeRow, j);
             cpy[trailingEdgeRow][j] = calculateNeighbourMean(mat, (size_t) trailingEdgeRow, j);
         }
@@ -89,10 +93,24 @@ void updateEdgeRows(double** mat, double** cpy, size_t n_chunks, size_t row_size
 void rebuildMatrix(double** cpy, FlatMatrixChunk* processorChunks, size_t n_chunks) {
     for (size_t i = 0; i < n_chunks; i++) {
         FlatMatrixChunk chunk = processorChunks[i];
+        // for (size_t l = 0; l < chunk.n * chunk.m; l ++) {
+        //     printf("%ld ", chunk.start_row);
+        // }
+        // for (size_t j = chunk.start_row; j < chunk.start_row + chunk.n - 1; j++) {
+        //     for (size_t k = 0; k < chunk.m; k++) {
+
+        //     }
+        // }
+        // printf("%.2lf\n\n", chunk.flat[8]);
         for (size_t j = chunk.start_row + 1; j < chunk.start_row + chunk.n - 1; j++) {
+            // printf("%.2lf\n\n", chunk.flat[8]);
             for (size_t k = 0; k < chunk.m; k++) {
+                // printf("%ld ", ((j - chunk.start_row) * chunk.m) + k);
+                // printf("%.2lf ", chunk.flat[8]); printf("%.2lf ", chunk.flat[8]); printf("%.2lf ", chunk.flat[8]);
+                // printf("<%ld>", j);
                 cpy[j][k] = chunk.flat[((j - chunk.start_row) * chunk.m) + k];
             }
+            // printf("\n");
         }
     }
 }
@@ -128,7 +146,7 @@ void relaxationMaster(double** mat, size_t size, int mpi_rank, size_t n_processo
     calculateProcessorChunkSizes(processorChunkSizes, size, n_chunks);
     calculateProcessorChunkRows(processorChunkRows, processorChunkSizes, n_chunks);
     while (!stop) {
-        logSquareDoubleMatrix(mat, size);
+        if (logging) logSquareDoubleMatrix(mat, size);
         generateProcessorChunks(processorChunks, processorChunkRows, mat, n_chunks, size, size);
         distributeChunks(processorChunks, n_chunks); // Distribute to worker cores
         updateEdgeRows(mat, cpy, n_chunks, size, mpi_rank, processorChunkRows); // Update edge rows in chunks that don't have 4 neighbours

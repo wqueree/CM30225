@@ -4,13 +4,13 @@
 #SBATCH --account=cm30225
  
 # Set name of job
-#SBATCH --job-name=4-pthread
-#SBATCH --output=4-pthread.out
-#SBATCH --error=4-pthread.err
+#SBATCH --job-name=pthread
+#SBATCH --output=pthread.out
+#SBATCH --error=pthread.err
  
 # Set the number of nodes and partition
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=2
+#SBATCH --ntasks-per-node=44
 #SBATCH --partition=teaching
 
 
@@ -24,4 +24,4 @@
 #SBATCH --mail-user=wlq20@bath.ac.uk
  
 # Run the application
-./parallel ../test-data/4.txt 2
+./parallel ../test-data/1024.txt 44
