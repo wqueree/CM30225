@@ -6,6 +6,25 @@
 #include <mpi.h>
 #include "utils.h"
 
+void flattenRows(FlatMatrixChunk* flatMatrixChunk, double** mat, size_t start_row, size_t end_row, size_t row_size) {
+    // end row terminates iteration and is not included.
+    size_t num_rows = end_row - start_row;
+    double* flat = (double*) malloc(num_rows * row_size * sizeof(double));
+    for (size_t i = start_row; i < end_row; i++) {
+        for (size_t j = 0; j < row_size; j++) {
+            flat[((i - start_row) * row_size) + j] = mat[i][j];
+        }
+    }
+    flatMatrixChunk->n = num_rows;
+    flatMatrixChunk->m = row_size;
+    flatMatrixChunk->start_row = start_row;
+    flatMatrixChunk->flat = flat;
+}
+
+void freeFlatMatrixChunk(FlatMatrixChunk* flatMatrixChunk) {
+    free(flatMatrixChunk->flat);
+}
+
 void calculateProcessorChunkSizes(long* processorChunkRows, size_t size, size_t n_chunks) {
     long floor = (long) size / (long) n_chunks;
     for (size_t i = 0; i < n_chunks; i++) {
@@ -23,9 +42,9 @@ void calculateProcessorChunkRows(long* processorChunkRows, long* processorChunkS
 
 void generateProcessorChunks(FlatMatrixChunk* processorChunks, long* processorChunkRows, double** mat, size_t n_chunks, size_t n, size_t m) {
     for (size_t i = 0; i < n_chunks - 1; i++) {
-        processorChunks[i] = *flattenRows(mat, (size_t) processorChunkRows[i], (size_t) processorChunkRows[i + 1], m);
+        flattenRows(&processorChunks[i], mat, (size_t) processorChunkRows[i], (size_t) processorChunkRows[i + 1], m);
     }
-    processorChunks[n_chunks - 1] = *flattenRows(mat, (size_t) processorChunkRows[n_chunks - 1], n, m);
+    flattenRows(&processorChunks[n_chunks - 1], mat, (size_t) processorChunkRows[n_chunks - 1], n, m);
 }
 
 void distributeChunks(FlatMatrixChunk* processorChunks, size_t n_chunks) {
@@ -115,7 +134,9 @@ void relaxationMaster(double** mat, size_t size, int mpi_rank, size_t n_processo
         updateEdgeRows(mat, cpy, n_chunks, size, mpi_rank, processorChunkRows); // Update edge rows in chunks that don't have 4 neighbours
         collateChunks(processorChunks, n_chunks); // Receive completed computations from worker cores
         rebuildMatrix(cpy, processorChunks, n_chunks);
-
+        for (size_t i = 0; i < n_chunks; i++) {
+            freeFlatMatrixChunk(&processorChunks[i]);
+        }
         stop = precisionStopCheck(mat, cpy, size);
         matrixSwap(&mat, &cpy);
         if (stop) {
@@ -126,6 +147,8 @@ void relaxationMaster(double** mat, size_t size, int mpi_rank, size_t n_processo
             logSquareDoubleMatrix(mat, size);
         }
     }
+    freeDoubleMatrix(mat);
+    freeDoubleMatrix(cpy);
 }
 
 void relaxationSlave(int mpi_rank, bool logging) {
@@ -146,13 +169,13 @@ void relaxationSlave(int mpi_rank, bool logging) {
                     result[i][j] = calculateNeighbourMean(chunk, i, j);
                 }
             }
-            FlatMatrixChunk* resultFlatMatrixChunk = flattenRows(result, 0, n, m);
-            double* flatResult = resultFlatMatrixChunk->flat;
+            FlatMatrixChunk resultFlatMatrixChunk;
+            flattenRows(&resultFlatMatrixChunk, result, 0, n, m);
+            double* flatResult = resultFlatMatrixChunk.flat;
             MPI_Send(flatResult, (int) n * (int) m, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD);
             freeDoubleMatrix(chunk);
             freeDoubleMatrix(result);
-            free(resultFlatMatrixChunk);
-            free(flatResult);
+            freeFlatMatrixChunk(&resultFlatMatrixChunk);
         }
         else {
             stop = true;

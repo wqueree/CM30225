@@ -37,24 +37,6 @@ double** inputDoubleMatrix(char* dataFilePath, size_t* size) {
     return mat;
 }
 
-
-FlatMatrixChunk* flattenRows(double** mat, size_t start_row, size_t end_row, size_t row_size) {
-    // end row terminates iteration and is not included.
-    size_t num_rows = end_row - start_row;
-    double* flatChunk = (double*) malloc(num_rows * row_size * sizeof(double));
-    FlatMatrixChunk* flatMatrixChunk = (FlatMatrixChunk*) malloc(sizeof(FlatMatrixChunk));
-    for (size_t i = start_row; i < end_row; i++) {
-        for (size_t j = 0; j < row_size; j++) {
-            flatChunk[((i - start_row) * row_size) + j] = mat[i][j];
-        }
-    }
-    flatMatrixChunk->n = num_rows;
-    flatMatrixChunk->m = row_size;
-    flatMatrixChunk->start_row = start_row;
-    flatMatrixChunk->flat = flatChunk;
-    return flatMatrixChunk;
-}
-
 double** initDoubleMatrix(size_t n, size_t m) {
     // Allocates memory for a double matrix of size*size elements
     double** mat = (double**) malloc(n * sizeof(double*));
