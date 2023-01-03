@@ -117,15 +117,13 @@ void relaxationMaster(double** mat, size_t size, int mpi_rank, size_t n_processo
         rebuildMatrix(cpy, processorChunks, n_chunks);
 
         stop = precisionStopCheck(mat, cpy, size);
+        matrixSwap(&mat, &cpy);
         if (stop) {
             for (size_t i = 0; i < n_chunks; i++) {
                 long sizeBuf[] = {0, 0};
                 MPI_Send(sizeBuf, 2, MPI_LONG, (int) i + 1, 0, MPI_COMM_WORLD);
             }
-            logSquareDoubleMatrix(cpy, size);
-        }
-        else {
-            matrixSwap(&mat, &cpy);
+            logSquareDoubleMatrix(mat, size);
         }
     }
 }
