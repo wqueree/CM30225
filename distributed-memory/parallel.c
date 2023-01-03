@@ -67,6 +67,28 @@ void updateEdgeRows(double** mat, double** cpy, size_t n_chunks, size_t row_size
     }
 }
 
+void rebuildMatrix(double** cpy, FlatMatrixChunk* processorChunks, size_t n_chunks) {
+    for (size_t i = 0; i < n_chunks; i++) {
+        FlatMatrixChunk chunk = processorChunks[i];
+        for (size_t j = chunk.start_row + 1; j < chunk.start_row + chunk.n - 1; j++) {
+            for (size_t k = 0; k < chunk.m; k++) {
+                cpy[j][k] = chunk.flat[((j - chunk.start_row) * chunk.m) + k];
+            }
+        }
+    }
+}
+
+bool precisionStopCheck(double** mat, double** cpy, size_t size) {
+    for (size_t i = 0; i < size; i++) {
+        for (size_t j = 0; j < size; j++) {
+            if (fabs(mat[i][j] - cpy[i][j]) > PRECISION) {
+                return false; // At least one element in the matrix is outside PRECISION
+            }
+        }
+    }
+    return true;
+}
+
 void relaxationMaster(double** mat, size_t size, int mpi_rank, size_t n_processors, bool logging) {
     if (logging) printf("%d: Starting master process... ", mpi_rank);
     bool stop = false;
@@ -74,6 +96,10 @@ void relaxationMaster(double** mat, size_t size, int mpi_rank, size_t n_processo
     long processorChunkSizes[n_chunks];
     long processorChunkRows[n_chunks];
     double** cpy = initSquareDoubleMatrix(size);
+    for (size_t i = 0; i < size; i++) {
+        cpy[0][i] = mat[0][i];
+        cpy[size - 1][i] = mat[size - 1][i];
+    }
     FlatMatrixChunk processorChunks[n_chunks];
     calculateProcessorChunkSizes(processorChunkSizes, size, n_chunks);
     calculateProcessorChunkRows(processorChunkRows, processorChunkSizes, n_chunks);
@@ -91,22 +117,11 @@ void relaxationMaster(double** mat, size_t size, int mpi_rank, size_t n_processo
         if (logging) printf("%d: Collating chunks... ", mpi_rank);
         collateChunks(processorChunks, n_chunks); // Receive completed computations from worker cores
         if (logging) printf("done\n");
+        if (logging) printf("%d: Rebuilding matrix... ", mpi_rank);
+        rebuildMatrix(cpy, processorChunks, n_chunks);
+        if (logging) printf("done\n");
 
-        // Rebuild chunks to input matrix size
-        for (size_t i = 0; i < n_chunks; i++) {
-            FlatMatrixChunk chunk = processorChunks[i];
-            for (size_t j = chunk.start_row + 1; j < chunk.start_row + chunk.n - 1; j++) {
-                for (size_t k = 0; k < chunk.m; k++) {
-                    cpy[j][k] = chunk.flat[((j - chunk.start_row) * chunk.m) + k];
-                }
-            }
-        }
-        for (size_t i = 0; i < size; i++) {
-            cpy[0][i] = mat[0][i];
-            cpy[size - 1][i] = mat[size - 1][i];
-        }
-
-        stop = true; // TODO Implement stop checking
+        stop = precisionStopCheck(mat, cpy, size);
         if (stop) {
             if (logging) printf("%d: Sending termination signals... ", mpi_rank);
             for (size_t i = 0; i < n_chunks; i++) {
