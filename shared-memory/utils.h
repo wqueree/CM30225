@@ -4,7 +4,7 @@
 
 #define BILLION 1000000000L // Used in time calculations
 
-#define LOGGING false // Switch for logging
+#define LOGGING true // Switch for logging
 #define PRECISION 0.01 // Sets the precision
 
 
@@ -51,7 +51,7 @@ void logSquareDoubleMatrix(double** mat, size_t size) {
     // Logs mat
     for (size_t i = 0; i < size; i++) {
         for (size_t j = 0; j < size; j++) {
-            printf("%.2lf ", mat[i][j]);
+            printf("%.4lf ", mat[i][j]);
         }
         printf("\n");
     }

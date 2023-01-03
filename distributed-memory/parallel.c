@@ -79,8 +79,8 @@ void rebuildMatrix(double** cpy, FlatMatrixChunk* processorChunks, size_t n_chun
 }
 
 bool precisionStopCheck(double** mat, double** cpy, size_t size) {
-    for (size_t i = 0; i < size; i++) {
-        for (size_t j = 0; j < size; j++) {
+    for (size_t i = 1; i < size - 1; i++) {
+        for (size_t j = 1; j < size - 1; j++) {
             if (fabs(mat[i][j] - cpy[i][j]) > PRECISION) {
                 return false; // At least one element in the matrix is outside PRECISION
             }
@@ -96,7 +96,6 @@ void matrixSwap(double*** mat, double*** cpy) {
 }
 
 void relaxationMaster(double** mat, size_t size, int mpi_rank, size_t n_processors, bool logging) {
-    if (logging) printf("%d: Starting master process... ", mpi_rank);
     bool stop = false;
     size_t n_chunks = n_processors - 1;
     long processorChunkSizes[n_chunks];
@@ -109,33 +108,21 @@ void relaxationMaster(double** mat, size_t size, int mpi_rank, size_t n_processo
     FlatMatrixChunk processorChunks[n_chunks];
     calculateProcessorChunkSizes(processorChunkSizes, size, n_chunks);
     calculateProcessorChunkRows(processorChunkRows, processorChunkSizes, n_chunks);
-    if (logging) printf("done\n");
     while (!stop) {
-        if (logging) printf("%d: Generating chunks... ", mpi_rank);
+        logSquareDoubleMatrix(mat, size);
         generateProcessorChunks(processorChunks, processorChunkRows, mat, n_chunks, size, size);
-        if (logging) printf("done\n");
-        if (logging) printf("%d: Distributing chunks... ", mpi_rank);
         distributeChunks(processorChunks, n_chunks); // Distribute to worker cores
-        if (logging) printf("done\n");
-        if (logging) printf("%d: Updating edge rows... ", mpi_rank);
         updateEdgeRows(mat, cpy, n_chunks, size, mpi_rank, processorChunkRows); // Update edge rows in chunks that don't have 4 neighbours
-        if (logging) printf("done\n");
-        if (logging) printf("%d: Collating chunks... ", mpi_rank);
         collateChunks(processorChunks, n_chunks); // Receive completed computations from worker cores
-        if (logging) printf("done\n");
-        if (logging) printf("%d: Rebuilding matrix... ", mpi_rank);
         rebuildMatrix(cpy, processorChunks, n_chunks);
-        if (logging) printf("done\n");
 
         stop = precisionStopCheck(mat, cpy, size);
         if (stop) {
-            if (logging) printf("%d: Sending termination signals... ", mpi_rank);
             for (size_t i = 0; i < n_chunks; i++) {
                 long sizeBuf[] = {0, 0};
                 MPI_Send(sizeBuf, 2, MPI_LONG, (int) i + 1, 0, MPI_COMM_WORLD);
             }
-            if (logging) printf("done\n");
-            logSquareDoubleMatrix(mat, size);
+            logSquareDoubleMatrix(cpy, size);
         }
         else {
             matrixSwap(&mat, &cpy);
@@ -144,24 +131,16 @@ void relaxationMaster(double** mat, size_t size, int mpi_rank, size_t n_processo
 }
 
 void relaxationSlave(int mpi_rank, bool logging) {
-    if (logging) printf("%d: Starting slave process... ", mpi_rank);
     bool stop = false;
     long sizeBuf[2];
-    if (logging) printf("done\n");
     while (!stop) {
-        if (logging) printf("%d: Receiving chunk dimensions... ", mpi_rank);
         MPI_Recv(sizeBuf, 2, MPI_LONG, 0, 0, MPI_COMM_WORLD, 0);
         size_t n = (size_t) sizeBuf[0];
         size_t m = (size_t) sizeBuf[1];
-        if (logging) printf("done\n");
         if (n > 0 && m > 0) {
-            if (logging) printf("%d: Receiving chunk... ", mpi_rank);
             double flat[n * m];
             MPI_Recv(flat, (int) n * (int) m, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, 0);
-            if (logging) printf("done\n");
-            if (logging) printf("%d: Reshaping... ", mpi_rank);
             double** chunk = reshapeRows(flat, n, m);
-            if (logging) printf("done\n");
             double** result = initDoubleMatrix(n, m);
             doubleMatrixDeepCopy(chunk, result, n, m);
             for (size_t i = 1; i < n - 1; i++) {
@@ -178,20 +157,22 @@ void relaxationSlave(int mpi_rank, bool logging) {
             free(flatResult);
         }
         else {
-            if (logging) printf("%d: Received termination signal, terminating.\n", mpi_rank);
             stop = true;
         } 
     }
 }
 
 void relaxation(char* dataFilePath, size_t n_processors, int mpi_rank, bool logging) {
-    if (logging) printf("%d: Beginning relaxation phase\n", mpi_rank);
     if (mpi_rank == 0) {
-        if (logging) printf("%d: Reading input file... ", mpi_rank);
         size_t size;
         double** mat = inputDoubleMatrix(dataFilePath, &size);
-        if (logging) printf("done\n");
+        struct timespec start, stop, delta;
+        clock_gettime(CLOCK_REALTIME, &start);
         relaxationMaster(mat, size, mpi_rank, n_processors, logging);
+        clock_gettime(CLOCK_REALTIME, &stop);
+        timespecDifference(start, stop, &delta);
+        double duration = doubleTime(delta);
+        logDuration(size, duration, n_processors);
     }
     else {
         relaxationSlave(mpi_rank, logging);
@@ -205,17 +186,14 @@ int main(int argc, char** argv) {
     char* dataFilePath = argv[1];
 
     // MPI Setup
-    if (LOGGING) printf("Configuring MPI... ");
     int mpi_init_rc = MPI_Init(&argc, &argv);
     if (mpi_init_rc != MPI_SUCCESS) {
-        if (LOGGING) printf ("Error starting MPI program.\n");
         MPI_Abort(MPI_COMM_WORLD, mpi_init_rc);
     }
 
     int mpi_rank, mpi_size;
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-    if (LOGGING) printf("done for processor %d\n", mpi_rank);
     
     relaxation(dataFilePath, (size_t) mpi_size, mpi_rank, LOGGING);
     MPI_Finalize();

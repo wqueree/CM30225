@@ -4,7 +4,7 @@
 
 #define BILLION 1000000000L // Used in time calculations
 
-#define LOGGING false // Switch for logging
+#define LOGGING true // Switch for logging
 #define PRECISION 0.01 // Sets the precision
 
 typedef struct FlatMatrixChunk {
@@ -115,7 +115,7 @@ void logSquareDoubleMatrix(double** mat, size_t size) {
     // Logs mat
     for (size_t i = 0; i < size; i++) {
         for (size_t j = 0; j < size; j++) {
-            printf("%.2lf ", mat[i][j]);
+            printf("%.4lf ", mat[i][j]);
         }
         printf("\n");
     }
@@ -145,9 +145,9 @@ void timespecDifference(struct timespec start, struct timespec stop, struct time
     }
 }
 
-void logDuration(size_t size, double duration, size_t threads) {
+void logDuration(size_t size, double duration, size_t n_processors) {
     // Logs a double duration with some additional semantic info
-    printf("%ldx%ld matrix converged at precision %lf in %lfs using %ld threads\n", size, size, PRECISION, duration, threads);
+    printf("%ldx%ld matrix converged at precision %lf in %lfs using %ld processors\n", size, size, PRECISION, duration, n_processors);
 }
 
 double doubleTime(struct timespec delta) {
