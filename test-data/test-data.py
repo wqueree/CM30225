@@ -1,7 +1,6 @@
 import numpy as np
 
-for exp in range(2, 12):
-    size = 2 ** exp
+for size in range(500, 4001, 500):
     with open(file=f"{size}.txt", mode="w") as f:
         f.write(f"{size}\n")
         for _ in range(size):
