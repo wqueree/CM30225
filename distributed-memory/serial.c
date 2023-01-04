@@ -2,29 +2,23 @@
 #include <math.h>
 #include "utils.h"
 
-void squareDoubleMatrixDeepCopy(double** mat, double** copy, size_t size) {
+void squareDoubleMatrixDeepCopy(double** mat, double** cpy, size_t size) {
     // Creates copy of double matrix serially.
     for (size_t i = 0; i < size; i++) {
         for (size_t j = 0; j < size; j++) {
-            copy[i][j] = mat[i][j];
+            cpy[i][j] = mat[i][j];
         }
     }
 }
 
-bool relaxationStep(double** mat, double** copy, size_t size) {
+bool relaxationStep(double** mat, double** cpy, size_t size) {
     // Completes one step of the relaxation method.
-    squareDoubleMatrixDeepCopy(mat, copy, size);
+    // squareDoubleMatrixDeepCopy(mat, cpy, size);
     bool stop = true;
     for (size_t i = 1; i < size - 1; i++) {
         for (size_t j = 1; j < size - 1; j++) {
-            double meanValues[] = {
-                copy[i - 1][j],
-                copy[i][j + 1],
-                copy[i + 1][j],
-                copy[i][j - 1]
-            };
-            mat[i][j] = doubleMean(meanValues, 4);
-            if (fabs(mat[i][j] - copy[i][j]) > PRECISION) {
+            cpy[i][j] = calculateNeighbourMean(mat, i, j);
+            if (fabs(mat[i][j] - cpy[i][j]) > PRECISION) {
                 stop = false; // At least one element in the matrix is outside PRECISION
             }
         }
@@ -34,13 +28,14 @@ bool relaxationStep(double** mat, double** copy, size_t size) {
 
 void relaxation(double** mat, size_t size, bool logging) {
     bool stop = false;
-    double** copy = initSquareDoubleMatrix(size);
+    double** cpy = initSquareDoubleMatrix(size);
     if (logging) logSquareDoubleMatrix(mat, size);
     while (!stop) { // While values are outside of PRECISION
-        stop = relaxationStep(mat, copy, size);
+        stop = relaxationStep(mat, cpy, size);
+        matrixSwap(&mat, &cpy);
         if (logging) logSquareDoubleMatrix(mat, size);
     }
-    freeDoubleMatrix(copy);
+    freeDoubleMatrix(cpy);
 }
 
 int main(int argc, char** argv) {
