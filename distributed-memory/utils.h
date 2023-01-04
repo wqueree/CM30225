@@ -4,7 +4,7 @@
 
 #define BILLION 1000000000L // Used in time calculations
 
-#define LOGGING true // Switch for logging
+#define LOGGING false // Switch for logging
 #define PRECISION 0.01 // Sets the precision
 
 typedef struct FlatMatrixChunk {
@@ -104,6 +104,12 @@ void logSquareDoubleMatrix(double** mat, size_t size) {
     printf("\n");
 }
 
+void matrixSwap(double*** mat, double*** cpy) {
+    double** tmp = *mat;
+    *mat = *cpy;
+    *cpy = tmp;
+}
+
 double doubleMean(double values[], int n) {
     // Calculates mean of the n elements of values
     double valuesSum = 0.0;
@@ -111,6 +117,16 @@ double doubleMean(double values[], int n) {
         valuesSum += values[i];
     }
     return valuesSum / n;
+}
+
+double calculateNeighbourMean(double** mat, size_t i, size_t j) {
+    double neighbours[] = {
+        mat[i - 1][j],
+        mat[i][j + 1],
+        mat[i + 1][j],
+        mat[i][j - 1]
+    };
+    return doubleMean(neighbours, 4);
 }
 
 void timespecDifference(struct timespec start, struct timespec stop, struct timespec* delta) {

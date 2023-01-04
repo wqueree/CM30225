@@ -2,15 +2,6 @@
 #include <math.h>
 #include "utils.h"
 
-void squareDoubleMatrixDeepCopy(double** mat, double** cpy, size_t size) {
-    // Creates copy of double matrix serially.
-    for (size_t i = 0; i < size; i++) {
-        for (size_t j = 0; j < size; j++) {
-            cpy[i][j] = mat[i][j];
-        }
-    }
-}
-
 bool relaxationStep(double** mat, double** cpy, size_t size) {
     // Completes one step of the relaxation method.
     // squareDoubleMatrixDeepCopy(mat, cpy, size);
@@ -29,12 +20,14 @@ bool relaxationStep(double** mat, double** cpy, size_t size) {
 void relaxation(double** mat, size_t size, bool logging) {
     bool stop = false;
     double** cpy = initSquareDoubleMatrix(size);
+    squareDoubleMatrixDeepCopy(mat, cpy, size);
     if (logging) logSquareDoubleMatrix(mat, size);
     while (!stop) { // While values are outside of PRECISION
         stop = relaxationStep(mat, cpy, size);
         matrixSwap(&mat, &cpy);
         if (logging) logSquareDoubleMatrix(mat, size);
     }
+    freeDoubleMatrix(mat);
     freeDoubleMatrix(cpy);
 }
 
@@ -70,6 +63,5 @@ int main(int argc, char** argv) {
     double duration = doubleTime(delta);
 
     logDuration(size, duration, 0);
-    freeDoubleMatrix(mat);
     return 0;
 }

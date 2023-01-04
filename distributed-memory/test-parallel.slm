@@ -6,12 +6,12 @@
 # Set name of job
 #SBATCH --job-name=mpi
 #SBATCH --output=mpi.out
-#SBATCH --error=moi.err
+#SBATCH --error=mpi.err
  
 # Set the number of nodes and partition
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=44
-#SBATCH --partition=iteaching
+#SBATCH --partition=teaching
 
 
 # Set max wallclock time
