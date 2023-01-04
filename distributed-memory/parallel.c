@@ -53,9 +53,7 @@ void distributeChunks(FlatMatrixChunk* processorChunks, size_t n_chunks) {
         int worker = (int) i + 1;
         long sizeBuf[] = {(int) chunk.n, (int) chunk.m};
         MPI_Send(sizeBuf, 2, MPI_LONG, worker, 0, MPI_COMM_WORLD);
-        MPI_Request request;
-        MPI_Isend(chunk.flat, (int) chunk.n * (int) chunk.m, MPI_DOUBLE, worker, 1, MPI_COMM_WORLD, &request);
-        MPI_Wait(&request, MPI_STATUS_IGNORE);
+        MPI_Send(chunk.flat, (int) chunk.n * (int) chunk.m, MPI_DOUBLE, worker, 1, MPI_COMM_WORLD);
     }
 }
 
@@ -63,9 +61,7 @@ void collateChunks(FlatMatrixChunk* processorChunks, size_t n_chunks) {
     for (size_t i = 0; i < n_chunks; i++) {
         FlatMatrixChunk chunk = processorChunks[i];
         int worker = (int) i + 1;
-        MPI_Request request;
-        MPI_Irecv(chunk.flat, (int) chunk.n * (int) chunk.m, MPI_DOUBLE, worker, 2, MPI_COMM_WORLD, &request);
-        MPI_Wait(&request, MPI_STATUS_IGNORE);
+        MPI_Recv(chunk.flat, (int) chunk.n * (int) chunk.m, MPI_DOUBLE, worker, 2, MPI_COMM_WORLD, 0);
     }
 }
 
@@ -136,7 +132,7 @@ void relaxationMaster(double** mat, size_t size, int mpi_rank, size_t n_processo
                 long sizeBuf[] = {0, 0};
                 MPI_Send(sizeBuf, 2, MPI_LONG, (int) i + 1, 0, MPI_COMM_WORLD);
             }
-            logSquareDoubleMatrix(mat, size);
+            if (logging) logSquareDoubleMatrix(mat, size);
         }
     }
     freeDoubleMatrix(mat);
@@ -147,9 +143,7 @@ void relaxationSlave(int mpi_rank, bool logging) {
     bool stop = false;
     long sizeBuf[2];
     while (!stop) {
-        MPI_Request request;
-        MPI_Irecv(sizeBuf, 2, MPI_LONG, 0, 0, MPI_COMM_WORLD, &request);
-        MPI_Wait(&request, MPI_STATUS_IGNORE);
+        MPI_Recv(sizeBuf, 2, MPI_LONG, 0, 0, MPI_COMM_WORLD, 0);
         size_t n = (size_t) sizeBuf[0];
         size_t m = (size_t) sizeBuf[1];
         if (n > 0 && m > 0) {
@@ -166,9 +160,7 @@ void relaxationSlave(int mpi_rank, bool logging) {
             FlatMatrixChunk resultFlatMatrixChunk;
             flattenRows(&resultFlatMatrixChunk, result, 0, n, m);
             double* flatResult = resultFlatMatrixChunk.flat;
-            MPI_Request request;
-            MPI_Isend(flatResult, (int) n * (int) m, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD, &request);
-            MPI_Wait(&request, MPI_STATUS_IGNORE);
+            MPI_Send(flatResult, (int) n * (int) m, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD);
             freeDoubleMatrix(chunk);
             freeDoubleMatrix(result);
             freeFlatMatrixChunk(&resultFlatMatrixChunk);
