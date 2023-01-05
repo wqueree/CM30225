@@ -110,6 +110,12 @@ void matrixSwap(double*** mat, double*** cpy) {
     *cpy = tmp;
 }
 
+void arraySwap(double** arr, double** cpy) {
+    double** tmp = arr;
+    arr = cpy;
+    cpy = tmp;
+}
+
 double doubleMean(double values[], int n) {
     // Calculates mean of the n elements of values
     double valuesSum = 0.0;
@@ -125,6 +131,17 @@ double calculateNeighbourMean(double** mat, size_t i, size_t j) {
         mat[i][j + 1],
         mat[i + 1][j],
         mat[i][j - 1]
+    };
+    return doubleMean(neighbours, 4);
+}
+
+
+double calculateFlatNeighbourMean(double* matFlat, size_t centre, size_t size) {
+    double neighbours[] = {
+        matFlat[centre - size],
+        matFlat[centre + 1],
+        matFlat[centre - size],
+        matFlat[centre - 1]
     };
     return doubleMean(neighbours, 4);
 }
