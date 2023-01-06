@@ -2,9 +2,9 @@
 #include <math.h>
 #include "utils.h"
 
-bool relaxationStep(double** mat, double** cpy, size_t size) {
+bool relaxationStep(float** mat, float** cpy, size_t size) {
     // Completes one step of the relaxation method.
-    // squareDoubleMatrixDeepCopy(mat, cpy, size);
+    // squareFloatMatrixDeepCopy(mat, cpy, size);
     bool stop = true;
     for (size_t i = 1; i < size - 1; i++) {
         for (size_t j = 1; j < size - 1; j++) {
@@ -17,18 +17,19 @@ bool relaxationStep(double** mat, double** cpy, size_t size) {
     return stop;
 }
 
-void relaxation(double** mat, size_t size, bool logging) {
+void relaxation(float** mat, size_t size, bool logging) {
     bool stop = false;
-    double** cpy = initSquareDoubleMatrix(size);
-    squareDoubleMatrixDeepCopy(mat, cpy, size);
-    if (logging) logSquareDoubleMatrix(mat, size);
+    float** cpy = initSquareFloatMatrix(size);
+    squareFloatMatrixDeepCopy(mat, cpy, size);
+    if (logging) logSquareFloatMatrix(mat, size);
     while (!stop) { // While values are outside of PRECISION
         stop = relaxationStep(mat, cpy, size);
         matrixSwap(&mat, &cpy);
-        if (logging) logSquareDoubleMatrix(mat, size);
+        if (logging) logSquareFloatMatrix(mat, size);
     }
-    freeDoubleMatrix(mat);
-    freeDoubleMatrix(cpy);
+    logSquareFloatMatrix(mat, size);
+    freeFloatMatrix(mat);
+    freeFloatMatrix(cpy);
 }
 
 int main(int argc, char** argv) {
@@ -42,11 +43,11 @@ int main(int argc, char** argv) {
 
     fscanf(dataFile, "%ld", &size);
 
-    double** mat = initSquareDoubleMatrix(size);
+    float** mat = initSquareFloatMatrix(size);
 
     for (size_t i = 0; i < size; i++) {
         for (size_t j = 0; j < size; j++) {
-            fscanf(dataFile, "%lf", &mat[i][j]);
+            fscanf(dataFile, "%f", &mat[i][j]);
         }
     }
 
@@ -60,7 +61,7 @@ int main(int argc, char** argv) {
     clock_gettime(CLOCK_REALTIME, &stop);
 
     timespecDifference(start, stop, &delta);
-    double duration = doubleTime(delta);
+    float duration = floatTime(delta);
 
     logDuration(size, duration, 0);
     return 0;

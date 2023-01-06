@@ -7,7 +7,7 @@
 #include <mpi.h>
 #include "utils.h"
 
-void flattenRows(double* flat, double** mat, size_t start_row, size_t end_row, size_t row_size) {
+void flattenRows(float* flat, float** mat, size_t start_row, size_t end_row, size_t row_size) {
     for (size_t i = start_row; i < end_row; i++) {
         for (size_t j = 0; j < row_size; j++) {
             flat[((i - start_row) * row_size) + j] = mat[i][j];
@@ -15,9 +15,9 @@ void flattenRows(double* flat, double** mat, size_t start_row, size_t end_row, s
     }
 }
 
-void populateFlatMatrixChunk(FlatMatrixChunk* flatMatrixChunk, double** mat, size_t start_row, size_t end_row, size_t row_size) {
+void populateFlatMatrixChunk(FlatMatrixChunk* flatMatrixChunk, float** mat, size_t start_row, size_t end_row, size_t row_size) {
     size_t num_rows = end_row - start_row;
-    double* flat = (double*) malloc(num_rows * row_size * sizeof(double));
+    float* flat = (float*) malloc(num_rows * row_size * sizeof(float));
     flattenRows(flat, mat, start_row, end_row, row_size);
     flatMatrixChunk->n = num_rows;
     flatMatrixChunk->m = row_size;
@@ -29,22 +29,22 @@ void freeFlatMatrixChunk(FlatMatrixChunk* flatMatrixChunk) {
     free(flatMatrixChunk->flat);
 }
 
-void calculateProcessorChunkSizes(long* processorChunkRows, size_t size, size_t n_chunks) {
-    long floor = (long) size / (long) n_chunks;
+void calculateProcessorChunkSizes(int* processorChunkRows, size_t size, size_t n_chunks) {
+    int floor = (int) size / (int) n_chunks;
     for (size_t i = 0; i < n_chunks; i++) {
         processorChunkRows[i] = floor;
     }
-    processorChunkRows[n_chunks - 1] += (long) size % (long) n_chunks;
+    processorChunkRows[n_chunks - 1] += (int) size % (int) n_chunks;
 }
 
-void calculateProcessorChunkRows(long* processorChunkRows, long* processorChunkSizes, size_t n_chunks) {
+void calculateProcessorChunkRows(int* processorChunkRows, int* processorChunkSizes, size_t n_chunks) {
     processorChunkRows[0] = 0;
     for (size_t i = 1; i < n_chunks; i++) {
         processorChunkRows[i] = processorChunkRows[i - 1] + processorChunkSizes[i - 1];
     }
 }
 
-void generateProcessorChunks(FlatMatrixChunk* processorChunks, long* processorChunkRows, double** mat, size_t n_chunks, size_t n, size_t m) {
+void generateProcessorChunks(FlatMatrixChunk* processorChunks, long* processorChunkRows, float** mat, size_t n_chunks, size_t n, size_t m) {
     for (size_t i = 0; i < n_chunks - 1; i++) {
         populateFlatMatrixChunk(&processorChunks[i], mat, (size_t) processorChunkRows[i], (size_t) processorChunkRows[i + 1], m);
     }
@@ -57,20 +57,20 @@ void distributeChunks(FlatMatrixChunk* processorChunks, size_t n_chunks) {
         int worker = (int) i + 1;
         long sizeBuf[] = {(int) chunk.n, (int) chunk.m};
         MPI_Send(sizeBuf, 2, MPI_LONG, worker, 0, MPI_COMM_WORLD);
-        MPI_Send(chunk.flat, (int) chunk.n * (int) chunk.m, MPI_DOUBLE, worker, 1, MPI_COMM_WORLD);
+        MPI_Send(chunk.flat, (int) chunk.n * (int) chunk.m, MPI_FLOAT, worker, 1, MPI_COMM_WORLD);
     }
 }
 
-void distributeFlatChunks(long* processorChunkRows, size_t n_chunks, double* matFlat, size_t size) {
+void distributeFlatChunks(int* processorChunkRows, size_t n_chunks, float* matFlat, size_t size) {
     int m = (int) size;
     for (size_t i = 0; i < n_chunks; i++) {
-        size_t start_row = processorChunkRows[i];
-        int end_row = i == n_chunks - 1 ? size : processorChunkRows[i + 1];
+        int start_row = (int) processorChunkRows[i];
+        int end_row = i == n_chunks - 1 ? (int) size : (int) processorChunkRows[i + 1];
         int n = (int) (end_row - start_row);
         int worker = (int) i + 1;
-        long sizeBuf[2] = {n, m};
-        MPI_Send(sizeBuf, 2, MPI_LONG, worker, 0, MPI_COMM_WORLD);
-        MPI_Send(&matFlat[start_row * m], n * m, MPI_DOUBLE, worker, 1, MPI_COMM_WORLD);
+        int sizeBuf[2] = {n, m};
+        MPI_Send(sizeBuf, 2, MPI_INT, worker, 0, MPI_COMM_WORLD);
+        MPI_Send(&matFlat[start_row * m], n * m, MPI_FLOAT, worker, 1, MPI_COMM_WORLD);
     }
 }
 
@@ -78,22 +78,22 @@ void collateChunks(FlatMatrixChunk* processorChunks, size_t n_chunks) {
     for (size_t i = 0; i < n_chunks; i++) {
         FlatMatrixChunk chunk = processorChunks[i];
         int worker = (int) i + 1;
-        MPI_Recv(chunk.flat, (int) chunk.n * (int) chunk.m, MPI_DOUBLE, worker, 2, MPI_COMM_WORLD, 0);
+        MPI_Recv(chunk.flat, (int) chunk.n * (int) chunk.m, MPI_FLOAT, worker, 2, MPI_COMM_WORLD, 0);
     }
 }
 
-void collateFlatChunks(double* cpyFlat, size_t size, long* processorChunkRows, size_t n_chunks) {
+void collateFlatChunks(float* cpyFlat, size_t size, int* processorChunkRows, size_t n_chunks) {
     int m = (int) size;
     for (size_t i = 0; i < n_chunks; i++) {
-        size_t start_row = processorChunkRows[i];
-        int end_row = i == n_chunks - 1 ? size : processorChunkRows[i + 1];
-        int n = (int) (end_row - start_row);
+        int start_row = (int) processorChunkRows[i];
+        int end_row = i == n_chunks - 1 ? (int) size : (int) processorChunkRows[i + 1];
+        int n = end_row - (int) start_row;
         int worker = (int) i + 1;
-        MPI_Recv(&cpyFlat[m * ((int) start_row + 1)], m * ((int) n - 2), MPI_DOUBLE, worker, 2, MPI_COMM_WORLD, 0);
+        MPI_Recv(&cpyFlat[m * (start_row + 1)], m * ((int) n - 2), MPI_FLOAT, worker, 2, MPI_COMM_WORLD, 0);
     }
 }
 
-void updateEdgeRows(double** mat, double** cpy, size_t n_chunks, size_t row_size, int mpi_rank, long* processorChunkRows) {
+void updateEdgeRows(float** mat, float** cpy, size_t n_chunks, size_t row_size, int mpi_rank, long* processorChunkRows) {
     for (size_t i = 1; i < n_chunks; i++) {
         long leadingEdgeRow = processorChunkRows[i];
         long trailingEdgeRow = leadingEdgeRow - 1;
@@ -108,22 +108,26 @@ void updateEdgeRows(double** mat, double** cpy, size_t n_chunks, size_t row_size
     }
 }
 
-void updateFlatEdgeRows(double* matFlat, double* cpyFlat, size_t n_chunks, size_t row_size, int mpi_rank, long* processorChunkRows) {
-    // for (size_t i = 1; i < n_chunks; i++) {
-    //     long leadingEdgeRow = processorChunkRows[i];
-    //     long trailingEdgeRow = leadingEdgeRow - 1;
-    //     cpy[leadingEdgeRow][0] = mat[leadingEdgeRow][0];
-    //     cpy[leadingEdgeRow][row_size - 1] = mat[leadingEdgeRow][row_size - 1];
-    //     cpy[trailingEdgeRow][0] = mat[trailingEdgeRow][0];
-    //     cpy[trailingEdgeRow][row_size - 1] = mat[trailingEdgeRow][row_size - 1];
-    //     for (size_t j = 1; j < row_size - 1; j++) {
-    //         cpy[leadingEdgeRow][j] = calculateNeighbourMean(mat, (size_t) leadingEdgeRow, j);
-    //         cpy[trailingEdgeRow][j] = calculateNeighbourMean(mat, (size_t) trailingEdgeRow, j);
-    //     }
-    // } TODO
+void updateFlatEdgeRows(float* matFlat, float* cpyFlat, size_t n_chunks, size_t row_size, int mpi_rank, int* processorChunkRows) {
+    for (size_t i = 1; i < n_chunks; i++) {
+        size_t leadingEdgeRow = (size_t) processorChunkRows[i];
+        size_t trailingEdgeRow = leadingEdgeRow - 1;
+        size_t flatLeadingEdgeRow = leadingEdgeRow * row_size;
+        size_t flatTrailingEdgeRow = trailingEdgeRow * row_size;
+        cpyFlat[flatLeadingEdgeRow] = matFlat[flatLeadingEdgeRow];
+        cpyFlat[flatLeadingEdgeRow + row_size - 1] = matFlat[flatLeadingEdgeRow + row_size - 1];
+        cpyFlat[flatTrailingEdgeRow] = matFlat[flatTrailingEdgeRow];
+        cpyFlat[flatTrailingEdgeRow + row_size - 1] = matFlat[flatTrailingEdgeRow + row_size - 1];
+        for (size_t j = 1; j < row_size - 1; j++) {
+            size_t flatLeadingCentre = (leadingEdgeRow * row_size) + j; 
+            size_t flatTrailingCentre = (trailingEdgeRow * row_size) + j; 
+            cpyFlat[flatLeadingEdgeRow + j] = calculateFlatNeighbourMean(matFlat, flatLeadingCentre, 4, row_size);
+            cpyFlat[flatTrailingEdgeRow + j] = calculateFlatNeighbourMean(matFlat, flatTrailingCentre, 4, row_size);
+        }
+    }
 }
 
-void rebuildMatrix(double** cpy, FlatMatrixChunk* processorChunks, size_t n_chunks) {
+void rebuildMatrix(float** cpy, FlatMatrixChunk* processorChunks, size_t n_chunks) {
     for (size_t i = 0; i < n_chunks; i++) {
         FlatMatrixChunk chunk = processorChunks[i];
         for (size_t j = chunk.start_row + 1; j < chunk.start_row + chunk.n - 1; j++) {
@@ -134,7 +138,7 @@ void rebuildMatrix(double** cpy, FlatMatrixChunk* processorChunks, size_t n_chun
     }
 }
 
-bool precisionStopCheck(double** mat, double** cpy, size_t size) {
+bool precisionStopCheck(float** mat, float** cpy, size_t size) {
     for (size_t i = 1; i < size - 1; i++) {
         for (size_t j = 1; j < size - 1; j++) {
             if (fabs(mat[i][j] - cpy[i][j]) > PRECISION) {
@@ -145,7 +149,19 @@ bool precisionStopCheck(double** mat, double** cpy, size_t size) {
     return true;
 }
 
-void arrayBorderCopy(double* matFlat, double* cpyFlat, size_t n, size_t m) {
+bool flatPrecisionStopCheck(float* matFlat, float* cpyFlat, size_t size) {
+    for (size_t i = 1; i < size - 1; i++) {
+        for (size_t j = 1; j < size - 1; j++) {
+            size_t index = (i * size) + j;
+            if (fabs(matFlat[index] - cpyFlat[index]) > PRECISION) {
+                return false; // At least one element in the matrix is outside PRECISION
+            }
+        }
+    }
+    return true;
+}
+
+void arrayBorderCopy(float* matFlat, float* cpyFlat, size_t n, size_t m) {
     size_t topLeft = 0;
     size_t topRight = m - 1;
     size_t bottomLeft = (n * m) - m;
@@ -167,61 +183,58 @@ void arrayBorderCopy(double* matFlat, double* cpyFlat, size_t n, size_t m) {
     }
 }
 
-void relaxationMaster(double** mat, size_t size, int mpi_rank, size_t n_processors, bool logging) {
+void relaxationMaster(float** mat, size_t size, int mpi_rank, size_t n_processors, bool logging) {
     bool stop = false;
     size_t n_chunks = n_processors - 1;
-    long processorChunkSizes[n_chunks];
-    long processorChunkRows[n_chunks];
-    double matFlat[size * size];
-    double cpyFlat[size * size];
+    int processorChunkSizes[n_chunks];
+    int processorChunkRows[n_chunks];
+    float* matFlat = (float*) malloc(size * size * sizeof(float));
+    float* cpyFlat = (float*) malloc(size * size * sizeof(float));
     flattenRows(matFlat, mat, 0, size, size);
-    memcpy(cpyFlat, matFlat, size * size);
-    // FlatMatrixChunk processorChunks[n_chunks];
+    memcpy(cpyFlat, matFlat, size * size * sizeof(float));
+
     calculateProcessorChunkSizes(processorChunkSizes, size, n_chunks);
     calculateProcessorChunkRows(processorChunkRows, processorChunkSizes, n_chunks);
     while (!stop) {
-        if (logging) logSquareDoubleMatrix(mat, size);
-        // generateProcessorChunks(processorChunks, processorChunkRows, mat, n_chunks, size, size); // EXPENSIVE
+        if (logging) logSquareFloatMatrix(mat, size);
         distributeFlatChunks(processorChunkRows, n_chunks, matFlat, size); // Distribute to worker cores
-    //     updateFlatEdgeRows(mat, cpy, n_chunks, size, mpi_rank, processorChunkRows); // Update edge rows in chunks that don't have 4 neighbours
-    //     collateChunks(processorChunks, n_chunks); // Receive completed computations from worker cores
-    //     rebuildMatrix(cpy, processorChunks, n_chunks);
-    //     for (size_t i = 0; i < n_chunks; i++) {
-    //         freeFlatMatrixChunk(&processorChunks[i]);
-    //     }
-    //     stop = precisionStopCheck(mat, cpy, size);
-    //     matrixSwap(&mat, &cpy);
-    //     if (stop) {
-    //         for (size_t i = 0; i < n_chunks; i++) {
-    //             long sizeBuf[] = {0, 0};
-    //             MPI_Send(sizeBuf, 2, MPI_LONG, (int) i + 1, 0, MPI_COMM_WORLD);
-    //         }
-    //         if (logging) logSquareDoubleMatrix(mat, size);
-    //     }
+        updateFlatEdgeRows(matFlat, cpyFlat, n_chunks, size, mpi_rank, processorChunkRows); // Update edge rows in chunks that don't have 4 neighbours
+        collateFlatChunks(cpyFlat, size, processorChunkRows, n_chunks); // Receive completed computations from worker cores
+        stop = flatPrecisionStopCheck(matFlat, cpyFlat, size);
+        arraySwap(&matFlat, &cpyFlat);
+        if (stop) {
+            for (size_t i = 0; i < n_chunks; i++) {
+                int sizeBuf[] = {0, 0};
+                MPI_Send(sizeBuf, 2, MPI_INT, (int) i + 1, 0, MPI_COMM_WORLD);
+            }
+            mat = reshapeRows(matFlat, size, size);
+            logSquareFloatMatrix(mat, size);
+        }
     }
-    // freeDoubleMatrix(mat);
-    // freeDoubleMatrix(cpy);
+    free(matFlat);
+    free(cpyFlat);
+    freeFloatMatrix(mat);
 }
 
 void relaxationSlave(int mpi_rank, bool logging) {
     bool stop = false;
-    long sizeBuf[2];
+    int sizeBuf[2];
     while (!stop) {
-        MPI_Recv(sizeBuf, 2, MPI_LONG, 0, 0, MPI_COMM_WORLD, 0);
+        MPI_Recv(sizeBuf, 2, MPI_INT, 0, 0, MPI_COMM_WORLD, 0);
         size_t n = (size_t) sizeBuf[0];
         size_t m = (size_t) sizeBuf[1];
-        double matFlat[n * m];
-        double cpyFlat[n * m];
+        float matFlat[n * m];
+        float cpyFlat[n * m];
         if (n > 0 && m > 0) {
-            MPI_Recv(matFlat, (int) n * (int) m, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, 0);
+            MPI_Recv(&matFlat, (int) n * (int) m, MPI_FLOAT, 0, 1, MPI_COMM_WORLD, 0);
             arrayBorderCopy(matFlat, cpyFlat, n, m);
             for (size_t i = 1; i < n - 1; i++) {
                 for (size_t j = 1; j < m - 1; j++) {
                     size_t centre = (i * m) + j; 
-                    cpyFlat[centre] = calculateFlatNeighbourMean(matFlat, centre, m);
+                    cpyFlat[centre] = calculateFlatNeighbourMean(matFlat, centre, 4, m);
                 }
             }
-            MPI_Send(&cpyFlat[m], (int) m * ((int) n - 2), MPI_DOUBLE, 0, 2, MPI_COMM_WORLD);
+            MPI_Send(&cpyFlat[m], (int) m * ((int) n - 2), MPI_FLOAT, 0, 2, MPI_COMM_WORLD);
         }
         else {
             stop = true;
@@ -232,13 +245,13 @@ void relaxationSlave(int mpi_rank, bool logging) {
 void relaxation(char* dataFilePath, size_t n_processors, int mpi_rank, bool logging) {
     if (mpi_rank == 0) {
         size_t size;
-        double** mat = inputDoubleMatrix(dataFilePath, &size);
+        float** mat = inputFloatMatrix(dataFilePath, &size);
         struct timespec start, stop, delta;
         clock_gettime(CLOCK_REALTIME, &start);
         relaxationMaster(mat, size, mpi_rank, n_processors, logging);
         clock_gettime(CLOCK_REALTIME, &stop);
         timespecDifference(start, stop, &delta);
-        double duration = doubleTime(delta);
+        float duration = floatTime(delta);
         logDuration(size, duration, n_processors);
     }
     else {
@@ -250,7 +263,8 @@ int main(int argc, char** argv) {
     // Main function. Should be invoked from command line as follows:
     // ./parallel path/to/matrix/file.txt
     // An example matrix file is attached in 8.txt
-    char* dataFilePath = argv[1];
+    size_t dataFileArgvIndex = (size_t) argc - 1;
+    char* dataFilePath = argv[dataFileArgvIndex];
 
     // MPI Setup
     int mpi_init_rc = MPI_Init(&argc, &argv);
