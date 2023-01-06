@@ -61,7 +61,7 @@ void distributeChunks(FlatMatrixChunk* processorChunks, size_t n_chunks) {
     }
 }
 
-void distributeFlatChunks(int* processorChunkRows, size_t n_chunks, float* matFlat, size_t size) {
+void distributeChunkSizes(int* processorChunkRows, size_t n_chunks, size_t size) {
     int m = (int) size;
     for (size_t i = 0; i < n_chunks; i++) {
         int start_row = (int) processorChunkRows[i];
@@ -70,6 +70,16 @@ void distributeFlatChunks(int* processorChunkRows, size_t n_chunks, float* matFl
         int worker = (int) i + 1;
         int sizeBuf[2] = {n, m};
         MPI_Send(sizeBuf, 2, MPI_INT, worker, 0, MPI_COMM_WORLD);
+    }
+}
+
+void distributeFlatChunks(int* processorChunkRows, size_t n_chunks, float* matFlat, size_t size) {
+    int m = (int) size;
+    for (size_t i = 0; i < n_chunks; i++) {
+        int start_row = (int) processorChunkRows[i];
+        int end_row = i == n_chunks - 1 ? (int) size : (int) processorChunkRows[i + 1];
+        int n = (int) (end_row - start_row);
+        int worker = (int) i + 1;
         MPI_Send(&matFlat[start_row * m], n * m, MPI_FLOAT, worker, 1, MPI_COMM_WORLD);
     }
 }
@@ -195,6 +205,7 @@ void relaxationMaster(float** mat, size_t size, int mpi_rank, size_t n_processor
 
     calculateProcessorChunkSizes(processorChunkSizes, size, n_chunks);
     calculateProcessorChunkRows(processorChunkRows, processorChunkSizes, n_chunks);
+    distributeChunkSizes(processorChunkRows, n_chunks, size);
     while (!stop) {
         if (logging) logSquareFloatMatrix(mat, size);
         distributeFlatChunks(processorChunkRows, n_chunks, matFlat, size); // Distribute to worker cores
@@ -204,8 +215,10 @@ void relaxationMaster(float** mat, size_t size, int mpi_rank, size_t n_processor
         arraySwap(&matFlat, &cpyFlat);
         if (stop) {
             for (size_t i = 0; i < n_chunks; i++) {
-                int sizeBuf[] = {0, 0};
-                MPI_Send(sizeBuf, 2, MPI_INT, (int) i + 1, 0, MPI_COMM_WORLD);
+                int rows = processorChunkSizes[i];
+                float terminal[rows * (int) size];
+                terminal[0] = (float) -1.0;
+                MPI_Send(&terminal[0], rows * (int) size, MPI_FLOAT, (int) i + 1, 0, MPI_COMM_WORLD);
             }
             mat = reshapeRows(matFlat, size, size);
             logSquareFloatMatrix(mat, size);
@@ -219,15 +232,15 @@ void relaxationMaster(float** mat, size_t size, int mpi_rank, size_t n_processor
 void relaxationSlave(int mpi_rank, bool logging) {
     bool stop = false;
     int sizeBuf[2];
+    MPI_Recv(sizeBuf, 2, MPI_INT, 0, 0, MPI_COMM_WORLD, 0);
+    size_t n = (size_t) sizeBuf[0];
+    size_t m = (size_t) sizeBuf[1];
+    float matFlat[n * m];
+    float cpyFlat[n * m];
+    arrayBorderCopy(matFlat, cpyFlat, n, m);
     while (!stop) {
-        MPI_Recv(sizeBuf, 2, MPI_INT, 0, 0, MPI_COMM_WORLD, 0);
-        size_t n = (size_t) sizeBuf[0];
-        size_t m = (size_t) sizeBuf[1];
-        float matFlat[n * m];
-        float cpyFlat[n * m];
-        if (n > 0 && m > 0) {
-            MPI_Recv(&matFlat, (int) n * (int) m, MPI_FLOAT, 0, 1, MPI_COMM_WORLD, 0);
-            arrayBorderCopy(matFlat, cpyFlat, n, m);
+        MPI_Recv(&matFlat, (int) n * (int) m, MPI_FLOAT, 0, 1, MPI_COMM_WORLD, 0);
+        if (matFlat[0] > 0.0) {
             for (size_t i = 1; i < n - 1; i++) {
                 for (size_t j = 1; j < m - 1; j++) {
                     size_t centre = (i * m) + j; 
