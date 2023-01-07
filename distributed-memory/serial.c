@@ -27,7 +27,6 @@ void relaxation(float** mat, size_t size, bool logging) {
         matrixSwap(&mat, &cpy);
         if (logging) logSquareFloatMatrix(mat, size);
     }
-    logSquareFloatMatrix(mat, size);
     freeFloatMatrix(mat);
     freeFloatMatrix(cpy);
 }
