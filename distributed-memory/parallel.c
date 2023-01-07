@@ -94,7 +94,7 @@ void collateFlatChunks(float* cpyFlat, size_t size, int* processorChunkRows, siz
         int endRow = i == nChunks - 1 ? (int) size : (int) processorChunkRows[i + 1]; // Set endRow to size if its the last chunk, otherwise the next chunk start row minus 1.
         int n = endRow - (int) startRow;
         int worker = (int) i + 1;
-        int* start = &cpyFlat[m * (startRow + 1)]; // Receive from row 1 of the chunk
+        float* start = &cpyFlat[m * (startRow + 1)]; // Receive from row 1 of the chunk
         int nValues = m * ((int) n - 2); // End at the penultimate row of the chunk
         MPI_Recv(start, nValues, MPI_FLOAT, worker, 2, MPI_COMM_WORLD, 0);
     }
