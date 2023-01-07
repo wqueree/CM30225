@@ -29,12 +29,13 @@ void freeFlatMatrixChunk(FlatMatrixChunk* flatMatrixChunk) {
     free(flatMatrixChunk->flat);
 }
 
-void calculateProcessorChunkSizes(int* processorChunkRows, size_t size, size_t n_chunks) {
-    int floor = (int) size / (int) n_chunks;
-    for (size_t i = 0; i < n_chunks; i++) {
-        processorChunkRows[i] = floor;
+void calculateProcessorChunkSizes(int* processorChunkSizes, size_t size, size_t n_chunks) {
+    memset(processorChunkSizes, 0, size * sizeof(int));
+    size_t chunk = 0;
+    for (size_t i = 0; i < size; i++) {
+        processorChunkSizes[chunk] += 1;
+        chunk = (chunk + 1) % n_chunks;
     }
-    processorChunkRows[n_chunks - 1] += (int) size % (int) n_chunks;
 }
 
 void calculateProcessorChunkRows(int* processorChunkRows, int* processorChunkSizes, size_t n_chunks) {
@@ -218,10 +219,11 @@ void relaxationMaster(float** mat, size_t size, int mpi_rank, size_t n_processor
                 int rows = processorChunkSizes[i];
                 float terminal[rows * (int) size];
                 terminal[0] = (float) -1.0;
-                MPI_Send(&terminal[0], rows * (int) size, MPI_FLOAT, (int) i + 1, 0, MPI_COMM_WORLD);
+                int worker = (int) i + 1;
+                MPI_Send(terminal, rows * (int) size, MPI_FLOAT, worker, 1, MPI_COMM_WORLD);
             }
             mat = reshapeRows(matFlat, size, size);
-            logSquareFloatMatrix(mat, size);
+            if (logging) logSquareFloatMatrix(mat, size);
         }
     }
     free(matFlat);
@@ -237,10 +239,10 @@ void relaxationSlave(int mpi_rank, bool logging) {
     size_t m = (size_t) sizeBuf[1];
     float matFlat[n * m];
     float cpyFlat[n * m];
-    arrayBorderCopy(matFlat, cpyFlat, n, m);
     while (!stop) {
         MPI_Recv(&matFlat, (int) n * (int) m, MPI_FLOAT, 0, 1, MPI_COMM_WORLD, 0);
-        if (matFlat[0] > 0.0) {
+        arrayBorderCopy(matFlat, cpyFlat, n, m);
+        if (!(matFlat[0] < 0.0)) {
             for (size_t i = 1; i < n - 1; i++) {
                 for (size_t j = 1; j < m - 1; j++) {
                     size_t centre = (i * m) + j; 
