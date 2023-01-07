@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
 
     fscanf(dataFile, "%ld", &size);
 
-    float** mat = initSquareFloatMatrix(size);
+    float** mat = inputFloatMatrix(dataFilePath, &size);
 
     for (size_t i = 0; i < size; i++) {
         for (size_t j = 0; j < size; j++) {

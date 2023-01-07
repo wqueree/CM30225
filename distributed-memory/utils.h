@@ -4,15 +4,8 @@
 
 #define BILLION 1000000000L // Used in time calculations
 
-#define LOGGING false // Switch for logging
+#define LOGGING true // Switch for logging
 #define PRECISION 0.01 // Sets the precision
-
-typedef struct FlatMatrixChunk {
-    size_t n;
-    size_t m;
-    size_t start_row;
-    float* flat;
-} FlatMatrixChunk;
 
 float** initSquareFloatMatrix(size_t size) {
     // Allocates memory for a float matrix of size*size elements
@@ -142,20 +135,13 @@ float calculateNeighbourMean(float** mat, size_t i, size_t j) {
     return floatMean(neighbours, 4);
 }
 
-
-float calculateFlatNeighbourMean(float* matFlat, size_t centre, int denominator, size_t row_size) {
+float calculateFlatNeighbourMean(float* matFlat, size_t centre, int denominator, size_t rowSize) {
     float neighbours[] = {
-        matFlat[centre + row_size],
+        matFlat[centre + rowSize],
         matFlat[centre + 1],
-        matFlat[centre - row_size],
+        matFlat[centre - rowSize],
         matFlat[centre - 1]
     };
-    // for (size_t i = 0; i < (size_t) denominator; i++) {
-    //     printf("%f ", neighbours[i]);
-    // }
-    // printf("\n");
-    // float f = floatMean(neighbours, 4);
-    // printf("%f\n", f);
     return floatMean(neighbours, denominator);
 }
 
@@ -173,9 +159,9 @@ void timespecDifference(struct timespec start, struct timespec stop, struct time
     }
 }
 
-void logDuration(size_t size, float duration, size_t n_processors) {
+void logDuration(size_t size, float duration, size_t nProcessors) {
     // Logs a float duration with some additional semantic info
-    printf("%ldx%ld matrix converged at precision %lf in %lfs using %ld processors\n", size, size, PRECISION, duration, n_processors);
+    printf("%ldx%ld matrix converged at precision %lf in %lfs using %ld processors\n", size, size, PRECISION, duration, nProcessors);
 }
 
 float floatTime(struct timespec delta) {
