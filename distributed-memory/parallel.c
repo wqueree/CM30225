@@ -30,7 +30,10 @@ void freeFlatMatrixChunk(FlatMatrixChunk* flatMatrixChunk) {
 }
 
 void calculateProcessorChunkSizes(int* processorChunkSizes, size_t size, size_t n_chunks) {
-    memset(processorChunkSizes, 0, size * sizeof(int));
+    // memset(processorChunkSizes, 0, size * sizeof(int));
+    for (size_t i = 0; i < n_chunks; i++) {
+        processorChunkSizes[i] = 0;
+    }
     size_t chunk = 0;
     for (size_t i = 0; i < size; i++) {
         processorChunkSizes[chunk] += 1;
