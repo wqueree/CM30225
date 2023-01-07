@@ -16,6 +16,7 @@
         "initializer_list": "c",
         "utility": "c",
         "pthread.h": "c",
-        "functional": "c"
+        "functional": "c",
+        "stdbool.h": "c"
     }
 }

@@ -2,6 +2,22 @@
 #include <math.h>
 #include "utils.h"
 
+void matrixSwap(float*** mat, float*** cpy) {
+    float** tmp = *mat;
+    *mat = *cpy;
+    *cpy = tmp;
+}
+
+float calculateNeighbourMean(float** mat, size_t i, size_t j) {
+    float neighbours[] = {
+        mat[i - 1][j],
+        mat[i][j + 1],
+        mat[i + 1][j],
+        mat[i][j - 1]
+    };
+    return floatMean(neighbours, 4);
+}
+
 bool relaxationStep(float** mat, float** cpy, size_t size) {
     // Completes one step of the relaxation method.
     // squareFloatMatrixDeepCopy(mat, cpy, size);
