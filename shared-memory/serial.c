@@ -2,7 +2,7 @@
 #include <math.h>
 #include "utils.h"
 
-void doubleMatrixDeepCopy(double** mat, double** copy, size_t size) {
+void squareDoubleMatrixDeepCopy(double** mat, double** copy, size_t size) {
     // Creates copy of double matrix serially.
     for (size_t i = 0; i < size; i++) {
         for (size_t j = 0; j < size; j++) {
@@ -13,7 +13,7 @@ void doubleMatrixDeepCopy(double** mat, double** copy, size_t size) {
 
 bool relaxationStep(double** mat, double** copy, size_t size) {
     // Completes one step of the relaxation method.
-    doubleMatrixDeepCopy(mat, copy, size);
+    squareDoubleMatrixDeepCopy(mat, copy, size);
     bool stop = true;
     for (size_t i = 1; i < size - 1; i++) {
         for (size_t j = 1; j < size - 1; j++) {

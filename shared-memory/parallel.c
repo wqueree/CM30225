@@ -173,11 +173,11 @@ void relaxation(double** mat, size_t size, size_t n_threads, bool logging) {
     pthread_t threads[n_threads];
 
     bool stop = false;
-    if (logging) logSquareDoubleMatrix(mat, size);
     while (!stop) { // Until all values of the matrix are within PRECISION
-        stop = relaxationStep(mat, copy, size, readBatchLengths, readBatchMatrixLocations, writeBatchLengths, writeBatchMatrixLocations, threads, n_threads);
         if (logging) logSquareDoubleMatrix(mat, size);
+        stop = relaxationStep(mat, copy, size, readBatchLengths, readBatchMatrixLocations, writeBatchLengths, writeBatchMatrixLocations, threads, n_threads);
     }
+    logSquareDoubleMatrix(mat, size);
 
     freeDoubleMatrix(copy);
     free(writeBatchLengths);

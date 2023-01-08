@@ -4,7 +4,7 @@
 
 #define BILLION 1000000000L // Used in time calculations
 
-#define LOGGING false // Switch for logging
+#define LOGGING true // Switch for logging
 #define PRECISION 0.01 // Sets the precision
 
 
