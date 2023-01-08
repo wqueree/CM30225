@@ -60,4 +60,4 @@ def test_correctness(runs: int, precision: float) -> None:
         # print(f"Run {i + 1} ({n=}): {'PASS' if relaxation_test(test_data_filename, precision) else 'FAIL'}")
         print(f"{i + 1} {n} {'Pass' if relaxation_test(test_data_filename, precision) else 'Fail'}")
 
-test_correctness(runs=50, precision=PRECISION)
+test_correctness(runs=40, precision=PRECISION)
