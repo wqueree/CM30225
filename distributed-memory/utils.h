@@ -1,54 +1,47 @@
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
 
 #define BILLION 1000000000L // Used in time calculations
 
-#define LOGGING false // Switch for logging
+#define LOGGING false  // Switch for logging
 #define PRECISION 0.01 // Sets the precision
 
-typedef struct FlatMatrixChunk {
-    size_t n;
-    size_t m;
-    size_t start_row;
-    double* flat;
-} FlatMatrixChunk;
-
-double** initSquareDoubleMatrix(size_t size) {
-    // Allocates memory for a double matrix of size*size elements
-    double** mat = (double**) malloc(size * sizeof(double*));
-    double* matBuf = (double*) malloc(size * size * sizeof(double));
+float **initSquareFloatMatrix(size_t size) {
+    // Allocates memory for a float matrix of size*size elements
+    float **mat = (float **)malloc(size * sizeof(float *));
+    float *matBuf = (float *)malloc(size * size * sizeof(float));
     for (size_t i = 0; i < size; i++) {
         mat[i] = (size * i) + matBuf;
     }
     return mat;
 }
 
-double** inputDoubleMatrix(char* dataFilePath, size_t* size) {
-    FILE* dataFile = fopen(dataFilePath, "r");
+float **inputFloatMatrix(char *dataFilePath, size_t *size) {
+    FILE *dataFile = fopen(dataFilePath, "r");
     fscanf(dataFile, "%ld", size);
-    double** mat = initSquareDoubleMatrix(*size);
+    float **mat = initSquareFloatMatrix(*size);
     for (size_t i = 0; i < *size; i++) {
         for (size_t j = 0; j < *size; j++) {
-            fscanf(dataFile, "%lf", &mat[i][j]);
+            fscanf(dataFile, "%f", &mat[i][j]);
         }
     }
     fclose(dataFile);
     return mat;
 }
 
-double** initDoubleMatrix(size_t n, size_t m) {
-    // Allocates memory for a double matrix of size*size elements
-    double** mat = (double**) malloc(n * sizeof(double*));
-    double* matBuf = (double*) malloc(n * m * sizeof(double));
+float **initFloatMatrix(size_t n, size_t m) {
+    // Allocates memory for a float matrix of size*size elements
+    float **mat = (float **)malloc(n * sizeof(float *));
+    float *matBuf = (float *)malloc(n * m * sizeof(float));
     for (size_t i = 0; i < n; i++) {
         mat[i] = (m * i) + matBuf;
     }
     return mat;
 }
 
-void doubleMatrixDeepCopy(double** mat, double** cpy, size_t n, size_t m) {
-    // Creates copy of double matrix serially.
+void floatMatrixDeepCopy(float **mat, float **cpy, size_t n, size_t m) {
+    // Creates copy of float matrix serially.
     for (size_t i = 0; i < n; i++) {
         for (size_t j = 0; j < m; j++) {
             cpy[i][j] = mat[i][j];
@@ -56,8 +49,8 @@ void doubleMatrixDeepCopy(double** mat, double** cpy, size_t n, size_t m) {
     }
 }
 
-void squareDoubleMatrixDeepCopy(double** mat, double** cpy, size_t size) {
-    // Creates copy of square double matrix serially.
+void squareFloatMatrixDeepCopy(float **mat, float **cpy, size_t size) {
+    // Creates copy of square float matrix serially.
     for (size_t i = 0; i < size; i++) {
         for (size_t j = 0; j < size; j++) {
             cpy[i][j] = mat[i][j];
@@ -65,90 +58,72 @@ void squareDoubleMatrixDeepCopy(double** mat, double** cpy, size_t size) {
     }
 }
 
-double** reshapeRows(double* flat, size_t n, size_t m) {
-    double** mat = initDoubleMatrix(n, m);
-    for (size_t i = 0; i < n; i++) {
-        for (size_t j = 0; j < m; j++) {
-            mat[i][j] = flat[(i * m) + j];
-        }
-    }
-    return mat;
-}
-
-
-void freeDoubleMatrix(double** mat) {
-    // Frees memory allocated by initDoubleMatrix
+void freeFloatMatrix(float **mat) {
+    // Frees memory allocated by initFloatMatrix
     free(mat[0]);
     free(mat);
 }
 
-void logDoubleMatrix(double** mat, size_t n, size_t m) {
+void logFloatMatrix(float **mat, size_t n, size_t m) {
     // Logs mat
     for (size_t i = 0; i < n; i++) {
         for (size_t j = 0; j < m; j++) {
-            printf("%.2lf ", mat[i][j]);
+            printf("%.2f ", mat[i][j]);
         }
         printf("\n");
     }
     printf("\n");
 }
 
-void logSquareDoubleMatrix(double** mat, size_t size) {
+void logSquareFloatMatrix(float **mat, size_t size) {
     // Logs mat
     for (size_t i = 0; i < size; i++) {
         for (size_t j = 0; j < size; j++) {
-            printf("%.2lf ", mat[i][j]);
+            printf("%.2f ", mat[i][j]);
         }
         printf("\n");
     }
     printf("\n");
 }
 
-void matrixSwap(double*** mat, double*** cpy) {
-    double** tmp = *mat;
-    *mat = *cpy;
-    *cpy = tmp;
+void logFloatArray(float *arr, size_t size) {
+    for (size_t i = 0; i < size; i++) {
+        printf("%.2f ", arr[i]);
+    }
+    printf("\n");
 }
 
-double doubleMean(double values[], int n) {
+float floatMean(float values[], int n) {
     // Calculates mean of the n elements of values
-    double valuesSum = 0.0;
+    float valuesSum = 0.0;
     for (int i = 0; i < n; i++) {
         valuesSum += values[i];
     }
-    return valuesSum / n;
+    return valuesSum / (float)n;
 }
 
-double calculateNeighbourMean(double** mat, size_t i, size_t j) {
-    double neighbours[] = {
-        mat[i - 1][j],
-        mat[i][j + 1],
-        mat[i + 1][j],
-        mat[i][j - 1]
-    };
-    return doubleMean(neighbours, 4);
-}
-
-void timespecDifference(struct timespec start, struct timespec stop, struct timespec* delta) {
+void timespecDifference(struct timespec start, struct timespec stop,
+                        struct timespec *delta) {
     // Calculates the difference between two struct timespecs
     delta->tv_nsec = stop.tv_nsec - start.tv_nsec;
-    delta->tv_sec  = stop.tv_sec - start.tv_sec;
+    delta->tv_sec = stop.tv_sec - start.tv_sec;
     if (delta->tv_sec > 0 && delta->tv_nsec < 0) {
         delta->tv_nsec += BILLION;
         delta->tv_sec--;
-    }
-    else if (delta->tv_sec < 0 && delta->tv_nsec > 0) {
+    } else if (delta->tv_sec < 0 && delta->tv_nsec > 0) {
         delta->tv_nsec -= BILLION;
         delta->tv_sec++;
     }
 }
 
-void logDuration(size_t size, double duration, size_t n_processors) {
-    // Logs a double duration with some additional semantic info
-    printf("%ldx%ld matrix converged at precision %lf in %lfs using %ld processors\n", size, size, PRECISION, duration, n_processors);
+void logDuration(size_t size, float duration, size_t nProcessors) {
+    // Logs a float duration with some additional semantic info
+    printf("%ldx%ld matrix converged at precision %lf in %lfs using %ld "
+           "processors\n",
+           size, size, PRECISION, duration, nProcessors);
 }
 
-double doubleTime(struct timespec delta) {
-    // Converts timespec time to double time
-    return (double) delta.tv_sec + ((double) delta.tv_nsec / BILLION);
+float floatTime(struct timespec delta) {
+    // Converts timespec time to float time
+    return (float)delta.tv_sec + ((float)delta.tv_nsec / BILLION);
 }
