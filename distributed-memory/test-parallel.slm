@@ -4,13 +4,13 @@
 #SBATCH --account=cm30225
  
 # Set name of job
-#SBATCH --job-name=160-1500
-#SBATCH --output=160-1500.out
-#SBATCH --error=160-1500.err
+#SBATCH --job-name=20-500
+#SBATCH --output=20-500.out
+#SBATCH --error=20-500.err
  
 # Set the number of nodes and partition
-#SBATCH --nodes=4
-#SBATCH --ntasks-per-node=40
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=20
 #SBATCH --partition=teaching
 
 
@@ -24,4 +24,4 @@
 #SBATCH --mail-user=wlq20@bath.ac.uk
  
 # Run the application
-mpirun -np 160 parallel ../test-data/1500.txt
+mpirun -np 20 parallel ../test-data/500.txt

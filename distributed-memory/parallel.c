@@ -259,6 +259,7 @@ void relaxationMaster(float **mat, size_t size, size_t nProcessors,
             mat = reshapeRows(matFlat, size, size); // Reshape into 2D matrix
             if (logging)
                 logSquareFloatMatrix(mat, size);
+            logSquareFloatMatrix(mat, size);
         }
     }
     free(matFlat);
@@ -297,7 +298,7 @@ void relaxation(char *dataFilePath, size_t nProcessors, int mpiRank,
         clock_gettime(CLOCK_REALTIME, &stop);
         timespecDifference(start, stop, &delta);
         float duration = floatTime(delta);
-        logDuration(size, duration, nProcessors);
+        // logDuration(size, duration, nProcessors);
     } else { // slave
         relaxationSlave();
     }

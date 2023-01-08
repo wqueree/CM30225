@@ -42,6 +42,7 @@ void relaxation(float **mat, size_t size, bool logging) {
         if (logging)
             logSquareFloatMatrix(mat, size);
     }
+    logSquareFloatMatrix(mat, size);
     freeFloatMatrix(mat);
     freeFloatMatrix(cpy);
 }
@@ -76,7 +77,6 @@ int main(int argc, char **argv) {
 
     timespecDifference(start, stop, &delta);
     float duration = floatTime(delta);
-
-    logDuration(size, duration, 0);
+    // logDuration(size, duration, 0);
     return 0;
 }
